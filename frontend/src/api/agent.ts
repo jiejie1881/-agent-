@@ -4,6 +4,7 @@ import type {
   AgentConversationDetail,
   AgentSendMessageResponse,
   AgentStatelessChatResponse,
+  AgentPendingActionExecutionResponse,
 } from '@/types/agent'
 
 export function createConversation() {
@@ -27,4 +28,16 @@ export function sendConversationMessage(conversationId: number, message: string)
 
 export function sendStatelessChat(message: string) {
   return http.post<AgentStatelessChatResponse>('/agent/chat', { message })
+}
+
+export function confirmPendingAction(conversationId: number, actionId: number) {
+  return http.post<AgentPendingActionExecutionResponse>(
+    `/agent/conversations/${conversationId}/pending-actions/${actionId}/confirm`,
+  )
+}
+
+export function cancelPendingAction(conversationId: number, actionId: number) {
+  return http.post<AgentPendingActionExecutionResponse>(
+    `/agent/conversations/${conversationId}/pending-actions/${actionId}/cancel`,
+  )
 }

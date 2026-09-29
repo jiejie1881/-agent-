@@ -16,6 +16,29 @@ export interface AgentConversationMessage {
 
 export interface AgentConversationDetail extends AgentConversation {
   messages: AgentConversationMessage[]
+  pending_actions: AgentPendingAction[]
+}
+
+export type AgentPendingActionStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'EXECUTED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'FAILED'
+
+export interface AgentPendingAction {
+  id: number
+  tool_name: string
+  summary: string
+  display_data: Record<string, unknown>
+  risk_level: string
+  risk_message: string
+  status: AgentPendingActionStatus
+  created_at: string
+  expires_at: string
+  confirmed_at?: string | null
+  executed_at?: string | null
 }
 
 export interface AgentSendMessageResponse {
@@ -24,6 +47,12 @@ export interface AgentSendMessageResponse {
   tool_calls_count: number
   used_tools: string[]
   request_id: string
+  pending_actions: AgentPendingAction[]
+}
+
+export interface AgentPendingActionExecutionResponse {
+  action: AgentPendingAction
+  result: Record<string, unknown>
 }
 
 export interface AgentStatelessChatResponse {

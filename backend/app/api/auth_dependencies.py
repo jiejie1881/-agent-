@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -9,6 +8,7 @@ from app.core.config import get_settings
 from app.core.security import decode_access_token
 from app.domain.enums import UserRole
 from app.domain.exceptions import AuthenticationError, PermissionDeniedError
+from app.domain.permissions import Permission, ROLE_PERMISSIONS, has_permission
 from app.infrastructure.database.session import get_db
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
@@ -44,27 +44,6 @@ def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
-class Permission(str, Enum):
-    READ = "READ"
-    AGENT_READ = "AGENT_READ"
-    MASTER_DATA_WRITE = "MASTER_DATA_WRITE"
-    OPERATIONS_WRITE = "OPERATIONS_WRITE"
-    DISPATCH_WRITE = "DISPATCH_WRITE"
-    ADMIN_ONLY = "ADMIN_ONLY"
-
-
-ROLE_PERMISSIONS = {
-    UserRole.ADMIN: set(Permission),
-    UserRole.DISPATCHER: {
-        Permission.READ,
-        Permission.AGENT_READ,
-        Permission.OPERATIONS_WRITE,
-        Permission.DISPATCH_WRITE,
-    },
-    UserRole.VIEWER: {Permission.READ, Permission.AGENT_READ},
-}
-
-
 def _required_permission(request: Request) -> Permission:
     if request.method in {"GET", "HEAD", "OPTIONS"}:
         return Permission.READ
@@ -75,7 +54,10 @@ def _required_permission(request: Request) -> Permission:
             "/agent/conversations"
         ) or (
             "/agent/conversations/" in normalized_path
-            and normalized_path.endswith("/messages")
+            and (
+                normalized_path.endswith("/messages")
+                or "/pending-actions/" in normalized_path
+            )
         ):
             return Permission.AGENT_READ
     if any(
@@ -95,7 +77,7 @@ def _required_permission(request: Request) -> Permission:
 
 def enforce_rbac(request: Request, current_user: CurrentUser) -> User:
     required = _required_permission(request)
-    if required not in ROLE_PERMISSIONS[current_user.role]:
+    if not has_permission(current_user.role, required):
         raise PermissionDeniedError()
     return current_user
 

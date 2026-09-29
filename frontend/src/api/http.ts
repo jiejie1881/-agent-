@@ -61,7 +61,7 @@ function getErrorMessage(error: AxiosError<BackendErrorBody>): string {
     return '该会话不存在或无权访问'
   }
   if (status === 403 && isAgentRequest) {
-    return '当前账号没有使用智能调度助手的权限'
+    return typeof detail === 'string' ? detail : '当前账号没有执行该Agent操作的权限'
   }
 
   if (typeof detail === 'string') {

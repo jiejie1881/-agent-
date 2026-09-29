@@ -1364,3 +1364,93 @@ Tool Result 是结构化真实数据，主要供模型继续处理。最终 AI �
 6. 最终回答为什么要成功后才和用户消息一起写入数据库？
 
 如果可以完整回答，并能口述第 17 章的压缩版调用链，就已经掌握了当前项目 Agent Phase 1 的核心工程结构。
+
+---
+
+## 21. Phase 2：确认后执行的写操作
+
+Phase 2 在原有六个只读 Tool 之外新增两个写 Tool：
+
+| Tool | 业务作用 | 后端权限 | 首次 Tool Call 是否执行 |
+|---|---|---|---|
+| `move_delivery_demand` | 移动 DRAFT 方案中的配送需求 | `DISPATCH_WRITE` | 否，只创建 Pending Action |
+| `cancel_dispatch_plan` | 取消 DRAFT 或 PUBLISHED 方案 | `DISPATCH_WRITE` | 否，只创建 Pending Action |
+
+Tool Definition 新增 `read_only`、`requires_confirmation` 和
+`required_permission` 元数据。模型仍然只能调用 Registry 中明确注册的工具；
+当 `requires_confirmation=true` 时，`AgentService` 不会进入写 Executor，而是让
+`AgentPendingActionService` 校验参数、当前权限和业务对象，并写入
+`agent_pending_actions`。
+
+真实调用链是：
+
+```text
+AgentChatView.vue
+→ Agent Conversation API
+→ AgentService
+→ ModelClient
+→ LLM Write Tool Call
+→ Tool Registry 校验 Schema 与 metadata
+→ AgentPendingActionService
+→ agent_pending_actions(PENDING)
+→ Conversation 问答与 Pending Action 同一次提交
+→ Vue AgentPendingActionCard
+→ 用户点击确认
+→ Confirm API
+→ 再次检查用户、Conversation、过期时间、状态与 DISPATCH_WRITE
+→ 行锁锁定 Pending Action
+→ Write Tool Executor
+→ DispatchPlanService
+→ Repository / MySQL
+→ AuditLog(source=agent, tool_name, pending_action_id)
+→ Pending Action(EXECUTED)
+→ 一次事务提交
+→ Vue 刷新会话
+```
+
+### 21.1 为什么要保存 Pending Action
+
+Pending Action 不是前端临时状态。它保存用户、Conversation、Tool 名、不可由前端
+重传的原始参数、摘要、风险说明、状态和过期时间，因此页面刷新或服务重启后仍可
+恢复，也不会因为前端篡改确认请求而改变执行参数。
+
+状态为：
+
+```text
+PENDING → CONFIRMED → EXECUTED
+PENDING → CANCELLED
+PENDING → EXPIRED
+PENDING → CONFIRMED → FAILED（执行时业务条件已经变化）
+```
+
+确认时使用数据库行锁，并且只有 `PENDING` 可以进入执行路径。因此双击、重试或并发
+确认不会导致业务操作重复执行。
+
+### 21.2 两次 RBAC 与业务重校验
+
+第一次权限检查发生在创建 Pending Action 前，VIEWER 不能生成可执行写操作。第二次
+发生在 Confirm 时，因为等待期间用户角色可能已经变化。真正执行时仍调用现有
+`DispatchPlanService.move_demand()` 或 `cancel()`，所以线路、地形、载重、方案状态等
+业务规则不会被 Agent 绕过。
+
+### 21.3 事务与审计
+
+确认路径由 Pending Action Service 持有最终事务提交。业务 Service 在 Agent 路径中
+只 `flush`，Audit Log 与业务修改一起留在同一 Session；随后 Action 改为 `EXECUTED`
+并统一 `commit`。任一步失败都会回滚业务修改，Action 会记录为 `FAILED`，且不会留下
+成功审计。成功审计沿用现有 `AuditLog.changes`，增加：
+
+```json
+{
+  "source": "agent",
+  "tool_name": "move_delivery_demand",
+  "pending_action_id": 123,
+  "result": "success"
+}
+```
+
+### 21.4 Vue 确认卡
+
+`AgentPendingActionCard.vue` 展示操作类型、摘要、关键参数、风险和状态。只有 ADMIN 或
+DISPATCHER 显示可用的确认/取消操作；点击确认还有一次界面二次确认。前端只提交
+Action ID，不提交 Tool 参数，最终权限与规则仍全部由后端判断。

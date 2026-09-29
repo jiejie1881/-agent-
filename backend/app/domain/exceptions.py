@@ -61,3 +61,8 @@ class DispatchPlanValidationError(BusinessError):
             code="DISPATCH_PLAN_VALIDATION_FAILED",
         )
         self.issues = issues
+
+
+class AgentPendingActionError(BusinessError):
+    def __init__(self, code: str, message: str, status_code: int = 409) -> None:
+        super().__init__(message, status_code=status_code, code=code)

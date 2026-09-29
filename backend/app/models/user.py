@@ -29,6 +29,12 @@ class User(TimestampMixin, Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    agent_pending_actions: Mapped[list["AgentPendingAction"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 from app.models.agent_conversation import AgentConversation  # noqa: E402
+from app.models.agent_pending_action import AgentPendingAction  # noqa: E402

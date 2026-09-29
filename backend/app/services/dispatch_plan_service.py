@@ -145,14 +145,23 @@ class DispatchPlanService:
             raise NotFoundError("派车方案不存在")
         return self._to_detail(refreshed)
 
-    def cancel(self, plan_id: int, actor: User) -> DispatchPlanDetailResponse:
-        plan = self._get_model(plan_id)
+    def cancel(
+        self,
+        plan_id: int,
+        actor: User,
+        *,
+        commit: bool = True,
+        audit_context: dict[str, object] | None = None,
+    ) -> DispatchPlanDetailResponse:
+        plan = self.repository.get_for_update(plan_id)
+        if plan is None:
+            raise NotFoundError("派车方案不存在")
         if plan.status == DispatchPlanStatus.CANCELLED:
             return self._to_detail(plan)
         if plan.status == DispatchPlanStatus.DRAFT:
-            return self._cancel_draft(plan, actor)
+            return self._cancel_draft(plan, actor, commit, audit_context)
         elif plan.status == DispatchPlanStatus.PUBLISHED:
-            return self._cancel_published(plan, actor)
+            return self._cancel_published(plan, actor, commit, audit_context)
         else:
             raise ConflictError("当前方案状态不能取消")
 
@@ -237,7 +246,11 @@ class DispatchPlanService:
         return self._to_detail(refreshed)
 
     def _cancel_draft(
-        self, plan: DispatchPlan, actor: User
+        self,
+        plan: DispatchPlan,
+        actor: User,
+        commit: bool,
+        audit_context: dict[str, object] | None,
     ) -> DispatchPlanDetailResponse:
         assigned_ids = self._assigned_demand_ids(plan)
         other_draft_ids = self.repository.assigned_demand_ids_in_draft_plans(
@@ -259,10 +272,16 @@ class DispatchPlanService:
             allowed_demand_statuses={DeliveryDemandStatus.PLANNED},
             demand_ids=releasable_ids,
             actor=actor,
+            commit=commit,
+            audit_context=audit_context,
         )
 
     def _cancel_published(
-        self, plan: DispatchPlan, actor: User
+        self,
+        plan: DispatchPlan,
+        actor: User,
+        commit: bool,
+        audit_context: dict[str, object] | None,
     ) -> DispatchPlanDetailResponse:
         assigned_ids = self._assigned_demand_ids(plan)
         draft_owned_ids = self.repository.assigned_demand_ids_in_draft_plans(
@@ -282,31 +301,44 @@ class DispatchPlanService:
                 allowed_current={DeliveryDemandStatus.PENDING},
             )
             self.repository.set_status(plan, DispatchPlanStatus.CANCELLED)
+            changes = {
+                "before_status": DispatchPlanStatus.PUBLISHED.value,
+                "after_status": DispatchPlanStatus.CANCELLED.value,
+                "released_demand_ids": sorted(assigned_ids),
+            }
+            if audit_context:
+                changes.update(audit_context)
             AuditLogService(self.session).add(
                 actor,
                 AuditAction.DISPATCH_PLAN_CANCELLED,
                 "DispatchPlan",
                 plan.id,
-                {
-                    "before_status": DispatchPlanStatus.PUBLISHED.value,
-                    "after_status": DispatchPlanStatus.CANCELLED.value,
-                    "released_demand_ids": sorted(assigned_ids),
-                },
+                changes,
             )
-            self.session.commit()
+            self.session.commit() if commit else self.session.flush()
         except ConflictError:
-            self.session.rollback()
+            if commit:
+                self.session.rollback()
             raise
         except IntegrityError as exc:
-            self.session.rollback()
+            if commit:
+                self.session.rollback()
             raise ConflictError("派车方案状态更新失败") from exc
+        if not commit:
+            return self._to_detail(plan)
         refreshed = self.repository.get(plan.id)
         if refreshed is None:
             raise NotFoundError("派车方案不存在")
         return self._to_detail(refreshed)
 
     def move_demand(
-        self, plan_id: int, data: DispatchDemandMoveRequest, actor: User
+        self,
+        plan_id: int,
+        data: DispatchDemandMoveRequest,
+        actor: User,
+        *,
+        commit: bool = True,
+        audit_context: dict[str, object] | None = None,
     ) -> DispatchPlanDetailResponse:
         try:
             plan = self.repository.get_for_update(plan_id)
@@ -401,27 +433,35 @@ class DispatchPlanService:
             source.total_load = source_load
             target.total_load = target_load
             self.session.add_all([detail, source, target])
+            changes = {
+                "plan_id": plan.id,
+                "source_order_id": source.id,
+                "target_order_id": target.id,
+                "quantity": detail.quantity,
+                "source_total_load_after": source_load,
+                "target_total_load_after": target_load,
+            }
+            if audit_context:
+                changes.update(audit_context)
             AuditLogService(self.session).add(
                 actor,
                 AuditAction.DISPATCH_DEMAND_MOVED,
                 "DeliveryDemand",
                 detail.delivery_demand_id,
-                {
-                    "plan_id": plan.id,
-                    "source_order_id": source.id,
-                    "target_order_id": target.id,
-                    "quantity": detail.quantity,
-                    "source_total_load_after": source_load,
-                    "target_total_load_after": target_load,
-                },
+                changes,
             )
-            self.session.commit()
+            self.session.commit() if commit else self.session.flush()
         except BusinessError:
-            self.session.rollback()
+            if commit:
+                self.session.rollback()
             raise
         except IntegrityError as exc:
-            self.session.rollback()
+            if commit:
+                self.session.rollback()
             raise ConflictError("人工调整派车任务失败") from exc
+
+        if not commit:
+            return self._to_detail(plan)
 
         self.session.expire_all()
         refreshed = self.repository.get(plan_id)
@@ -454,6 +494,8 @@ class DispatchPlanService:
         allowed_demand_statuses: set[DeliveryDemandStatus],
         demand_ids: set[int] | None = None,
         actor: User | None = None,
+        commit: bool = True,
+        audit_context: dict[str, object] | None = None,
     ) -> DispatchPlanDetailResponse:
         try:
             previous_status = plan.status
@@ -468,28 +510,35 @@ class DispatchPlanService:
             )
             self.repository.set_status(plan, status)
             if actor is not None:
+                changes = {
+                    "before_status": previous_status.value,
+                    "after_status": status.value,
+                    "released_demand_ids": sorted(
+                        demand_ids
+                        if demand_ids is not None
+                        else self._assigned_demand_ids(plan)
+                    ),
+                }
+                if audit_context:
+                    changes.update(audit_context)
                 AuditLogService(self.session).add(
                     actor,
                     AuditAction.DISPATCH_PLAN_CANCELLED,
                     "DispatchPlan",
                     plan.id,
-                    {
-                        "before_status": previous_status.value,
-                        "after_status": status.value,
-                        "released_demand_ids": sorted(
-                            demand_ids
-                            if demand_ids is not None
-                            else self._assigned_demand_ids(plan)
-                        ),
-                    },
+                    changes,
                 )
-            self.session.commit()
+            self.session.commit() if commit else self.session.flush()
         except ConflictError:
-            self.session.rollback()
+            if commit:
+                self.session.rollback()
             raise
         except IntegrityError as exc:
-            self.session.rollback()
+            if commit:
+                self.session.rollback()
             raise ConflictError("派车方案状态更新失败") from exc
+        if not commit:
+            return self._to_detail(plan)
         refreshed = self.repository.get(plan.id)
         if refreshed is None:
             raise NotFoundError("派车方案不存在")

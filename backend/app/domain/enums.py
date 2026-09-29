@@ -36,3 +36,12 @@ class UserRole(str, Enum):
 class AgentConversationMessageRole(str, Enum):
     USER = "USER"
     ASSISTANT = "ASSISTANT"
+
+
+class AgentPendingActionStatus(str, Enum):
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    EXECUTED = "EXECUTED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+    FAILED = "FAILED"

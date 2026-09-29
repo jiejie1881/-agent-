@@ -2,13 +2,22 @@
 import { ChatDotRound, User } from '@element-plus/icons-vue'
 import { nextTick, ref } from 'vue'
 
-import type { AgentConversationMessage } from '@/types/agent'
+import type { AgentConversationMessage, AgentPendingAction } from '@/types/agent'
+import AgentPendingActionCard from './AgentPendingActionCard.vue'
 
 defineProps<{
   messages: AgentConversationMessage[]
   loading: boolean
   responding: boolean
   hasConversation: boolean
+  pendingActions: AgentPendingAction[]
+  actionLoadingId: number | null
+  canOperate: boolean
+}>()
+
+defineEmits<{
+  confirmAction: [action: AgentPendingAction]
+  cancelAction: [action: AgentPendingAction]
 }>()
 
 const scrollContainer = ref<HTMLElement | null>(null)
@@ -51,6 +60,16 @@ defineExpose({ scrollToBottom })
           <div class="message-bubble">{{ message.content }}</div>
         </div>
       </article>
+
+      <AgentPendingActionCard
+        v-for="action in pendingActions"
+        :key="`action-${action.id}`"
+        :action="action"
+        :loading="actionLoadingId === action.id"
+        :can-operate="canOperate"
+        @confirm="$emit('confirmAction', $event)"
+        @cancel="$emit('cancelAction', $event)"
+      />
 
       <article v-if="responding" class="message-row is-assistant">
         <div class="message-row__avatar"><el-icon><ChatDotRound /></el-icon></div>

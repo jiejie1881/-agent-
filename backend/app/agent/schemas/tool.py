@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.enums import DeliveryPeriod
+from app.domain.permissions import Permission
 from app.schemas.common import PaginationParams
 
 
@@ -62,6 +63,16 @@ class ValidateDispatchPlanArgs(PlanIdToolArgs):
     pass
 
 
+class MoveDeliveryDemandArgs(PlanIdToolArgs):
+    delivery_demand_id: int = Field(gt=0, description="待移动配送需求ID")
+    source_order_id: int = Field(gt=0, description="当前配送任务ID")
+    target_order_id: int = Field(gt=0, description="目标配送任务ID")
+
+
+class CancelDispatchPlanArgs(PlanIdToolArgs):
+    pass
+
+
 class AgentToolDefinition(BaseModel):
     """Description and generated parameters for one model-visible function."""
 
@@ -70,6 +81,9 @@ class AgentToolDefinition(BaseModel):
     name: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     description: str = Field(min_length=1)
     arguments_schema: type[BaseModel] = Field(exclude=True, repr=False)
+    read_only: bool = True
+    requires_confirmation: bool = False
+    required_permission: Permission = Permission.AGENT_READ
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -166,4 +180,27 @@ VALIDATE_DISPATCH_PLAN_DEFINITION = AgentToolDefinition(
         "该检查不会发布、修改或取消方案。"
     ),
     arguments_schema=ValidateDispatchPlanArgs,
+)
+
+MOVE_DELIVERY_DEMAND_DEFINITION = AgentToolDefinition(
+    name="move_delivery_demand",
+    description=(
+        "申请把DRAFT派车方案中的一个配送需求从原任务移动到目标任务。"
+        "必须提供方案、需求、原任务和目标任务的准确ID；只生成待确认操作，不会立即修改方案。"
+    ),
+    arguments_schema=MoveDeliveryDemandArgs,
+    read_only=False,
+    requires_confirmation=True,
+    required_permission=Permission.DISPATCH_WRITE,
+)
+
+CANCEL_DISPATCH_PLAN_DEFINITION = AgentToolDefinition(
+    name="cancel_dispatch_plan",
+    description=(
+        "申请取消指定派车方案。该操作风险较高，只生成待确认操作，不会立即取消方案。"
+    ),
+    arguments_schema=CancelDispatchPlanArgs,
+    read_only=False,
+    requires_confirmation=True,
+    required_permission=Permission.DISPATCH_WRITE,
 )

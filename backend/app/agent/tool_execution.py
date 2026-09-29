@@ -27,6 +27,8 @@ _JSON_ADAPTER = TypeAdapter(Any)
 class AgentToolContext:
     current_user: User
     request_id: str | None = None
+    conversation_id: int | None = None
+    pending_action_id: int | None = None
 
 
 class AgentToolResult(BaseModel):
@@ -49,6 +51,7 @@ class AgentToolResult(BaseModel):
 class AgentToolExecutor(ABC, Generic[ArgsT]):
     name: str
     arguments_type: type[ArgsT]
+    preserve_business_errors: bool = False
 
     async def execute(
         self,
@@ -63,6 +66,8 @@ class AgentToolExecutor(ABC, Generic[ArgsT]):
         except AgentToolError:
             raise
         except BusinessError as exc:
+            if self.preserve_business_errors:
+                raise
             raise AgentToolExecutionError(
                 self.name,
                 exc.message,

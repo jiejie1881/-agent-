@@ -8,6 +8,7 @@ from app.agent.tool_execution import AgentToolContext
 from app.api.agent_dependencies import (
     AgentConversationServiceDependency,
     AgentServiceDependency,
+    AgentPendingActionServiceDependency,
 )
 from app.api.auth_dependencies import CurrentUser
 from app.domain.exceptions import BusinessError
@@ -18,6 +19,7 @@ from app.schemas.agent import (
     AgentConversationDetailResponse,
     AgentConversationMessageResponse,
     AgentConversationSummaryResponse,
+    AgentPendingActionExecutionResponse,
 )
 
 
@@ -62,6 +64,7 @@ def get_agent_conversation(
     conversation_id: int,
     current_user: CurrentUser,
     conversation_service: AgentConversationServiceDependency,
+    pending_action_service: AgentPendingActionServiceDependency,
 ) -> AgentConversationDetailResponse:
     conversation, messages = conversation_service.get_detail(
         conversation_id, current_user.id
@@ -74,6 +77,12 @@ def get_agent_conversation(
         messages=[
             AgentConversationMessageResponse.model_validate(message)
             for message in messages
+        ],
+        pending_actions=[
+            pending_action_service.snapshot(action)
+            for action in pending_action_service.list_owned(
+                conversation_id, current_user.id
+            )
         ],
     )
 
@@ -113,6 +122,7 @@ async def send_agent_conversation_message(
             AgentToolContext(
                 current_user=current_user,
                 request_id=request_id,
+                conversation_id=conversation_id,
             ),
             history=history,
         )
@@ -162,6 +172,45 @@ async def send_agent_conversation_message(
         tool_calls_count=result.tool_calls_count,
         used_tools=list(result.used_tools),
         request_id=request_id,
+        pending_actions=list(result.pending_actions),
+    )
+
+
+@router.post(
+    "/conversations/{conversation_id}/pending-actions/{action_id}/confirm",
+    response_model=AgentPendingActionExecutionResponse,
+    summary="确认并执行Agent待确认操作",
+)
+async def confirm_agent_pending_action(
+    conversation_id: int,
+    action_id: int,
+    current_user: CurrentUser,
+    pending_action_service: AgentPendingActionServiceDependency,
+) -> AgentPendingActionExecutionResponse:
+    action, result = await pending_action_service.confirm(
+        conversation_id, action_id, current_user
+    )
+    return AgentPendingActionExecutionResponse(
+        action=pending_action_service.snapshot(action),
+        result=result.data,
+    )
+
+
+@router.post(
+    "/conversations/{conversation_id}/pending-actions/{action_id}/cancel",
+    response_model=AgentPendingActionExecutionResponse,
+    summary="取消Agent待确认操作",
+)
+def cancel_agent_pending_action(
+    conversation_id: int,
+    action_id: int,
+    current_user: CurrentUser,
+    pending_action_service: AgentPendingActionServiceDependency,
+) -> AgentPendingActionExecutionResponse:
+    action = pending_action_service.cancel(conversation_id, action_id, current_user)
+    return AgentPendingActionExecutionResponse(
+        action=pending_action_service.snapshot(action),
+        result={"status": "cancelled"},
     )
 
 

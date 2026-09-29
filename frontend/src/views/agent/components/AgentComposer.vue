@@ -37,7 +37,7 @@ function handleEnter(event: KeyboardEvent) {
         :maxlength="4000"
         show-word-limit
         resize="none"
-        placeholder="输入调度查询，Enter 发送，Shift + Enter 换行"
+        placeholder="输入调度查询或操作请求，Enter 发送，Shift + Enter 换行"
         :disabled="sending"
         @update:model-value="updateValue"
         @keydown.enter="handleEnter"
@@ -52,7 +52,7 @@ function handleEnter(event: KeyboardEvent) {
         发送
       </el-button>
     </div>
-    <p>助手仅提供只读查询，回答以系统当前业务数据为准。</p>
+    <p>查询以系统当前数据为准；写操作必须通过确认卡片明确确认后才会执行。</p>
   </div>
 </template>
 

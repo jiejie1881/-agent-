@@ -265,6 +265,22 @@ class ValidateDispatchPlanTool(AgentToolExecutor[ValidateDispatchPlanArgs]):
         }
 
 
+def build_read_only_tool_executors(
+    *,
+    delivery_demand_service: DeliveryDemandService,
+    vehicle_attendance_service: VehicleAttendanceService,
+    dispatch_plan_service: DispatchPlanService,
+)-> list[AgentToolExecutor[Any]]:
+    return [
+            ListDeliveryDemandsTool(delivery_demand_service),
+            GetVehicleAttendanceTool(vehicle_attendance_service),
+            ListDispatchPlansTool(dispatch_plan_service),
+            GetDispatchPlanDetailTool(dispatch_plan_service),
+            GetUnassignedDemandsTool(dispatch_plan_service),
+            ValidateDispatchPlanTool(dispatch_plan_service),
+        ]
+
+
 def build_read_only_tool_executor_registry(
     *,
     delivery_demand_service: DeliveryDemandService,
@@ -273,13 +289,10 @@ def build_read_only_tool_executor_registry(
     definition_registry: AgentToolRegistry | None = None,
 ) -> AgentToolExecutorRegistry:
     return AgentToolExecutorRegistry(
-        [
-            ListDeliveryDemandsTool(delivery_demand_service),
-            GetVehicleAttendanceTool(vehicle_attendance_service),
-            ListDispatchPlansTool(dispatch_plan_service),
-            GetDispatchPlanDetailTool(dispatch_plan_service),
-            GetUnassignedDemandsTool(dispatch_plan_service),
-            ValidateDispatchPlanTool(dispatch_plan_service),
-        ],
+        build_read_only_tool_executors(
+            delivery_demand_service=delivery_demand_service,
+            vehicle_attendance_service=vehicle_attendance_service,
+            dispatch_plan_service=dispatch_plan_service,
+        ),
         definition_registry=definition_registry,
     )

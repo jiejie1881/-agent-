@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChatDotRound, Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, onMounted, ref } from 'vue'
 
 import {
@@ -8,8 +8,11 @@ import {
   getConversation,
   listConversations,
   sendConversationMessage,
+  confirmPendingAction,
+  cancelPendingAction,
 } from '@/api/agent'
-import type { AgentConversation, AgentConversationDetail } from '@/types/agent'
+import type { AgentConversation, AgentConversationDetail, AgentPendingAction } from '@/types/agent'
+import { useAuthStore } from '@/stores/auth'
 import AgentComposer from '@/views/agent/components/AgentComposer.vue'
 import AgentConversationList from '@/views/agent/components/AgentConversationList.vue'
 import AgentMessageList from '@/views/agent/components/AgentMessageList.vue'
@@ -28,9 +31,12 @@ const creating = ref(false)
 const sending = ref(false)
 const detailRequestSequence = ref(0)
 const messageListRef = ref<MessageListExpose | null>(null)
+const actionLoadingId = ref<number | null>(null)
+const authStore = useAuthStore()
 
 const interactionLocked = computed(() => creating.value || sending.value)
 const messages = computed(() => currentConversation.value?.messages ?? [])
+const pendingActions = computed(() => currentConversation.value?.pending_actions ?? [])
 
 async function refreshConversationList() {
   listLoading.value = true
@@ -73,7 +79,7 @@ async function createAndSelectConversation(): Promise<number | null> {
     const created = response.data
     conversations.value = [created, ...conversations.value.filter((item) => item.id !== created.id)]
     currentConversationId.value = created.id
-    currentConversation.value = { ...created, messages: [] }
+    currentConversation.value = { ...created, messages: [], pending_actions: [] }
     ++detailRequestSequence.value
     await nextTick()
     return created.id
@@ -129,6 +135,47 @@ async function initialize() {
   if (firstConversation) await selectConversation(firstConversation.id)
 }
 
+async function reloadCurrentConversation() {
+  const id = currentConversationId.value
+  if (id === null) return
+  currentConversation.value = (await getConversation(id)).data
+}
+
+async function handleConfirmAction(action: AgentPendingAction) {
+  const conversationId = currentConversationId.value
+  if (conversationId === null || actionLoadingId.value !== null) return
+  try {
+    await ElMessageBox.confirm(
+      action.risk_level === 'HIGH' ? `${action.summary}。该操作风险较高，确认继续？` : `${action.summary}，确认执行？`,
+      '确认 Agent 写操作',
+      { type: action.risk_level === 'HIGH' ? 'error' : 'warning', confirmButtonText: '确认执行', cancelButtonText: '返回' },
+    )
+    actionLoadingId.value = action.id
+    await confirmPendingAction(conversationId, action.id)
+    ElMessage.success('操作已执行')
+    await reloadCurrentConversation()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+  } finally {
+    actionLoadingId.value = null
+  }
+}
+
+async function handleCancelAction(action: AgentPendingAction) {
+  const conversationId = currentConversationId.value
+  if (conversationId === null || actionLoadingId.value !== null) return
+  actionLoadingId.value = action.id
+  try {
+    await cancelPendingAction(conversationId, action.id)
+    ElMessage.success('待确认操作已取消，业务数据未修改')
+    await reloadCurrentConversation()
+  } catch {
+    // Shared interceptor displays the backend business error.
+  } finally {
+    actionLoadingId.value = null
+  }
+}
+
 onMounted(initialize)
 </script>
 
@@ -150,7 +197,7 @@ onMounted(initialize)
     </div>
 
     <el-alert
-      title="当前为只读调度助手，不会修改派车方案、配送需求或配送状态。"
+      title="助手可查询业务数据，也可生成待确认写操作；只有点击确认卡片后才会真正执行。"
       type="info"
       :closable="false"
       show-icon
@@ -171,9 +218,9 @@ onMounted(initialize)
         <div class="chat-panel__header">
           <div>
             <strong>{{ currentConversation?.title ?? '新会话' }}</strong>
-            <span>物流业务只读查询</span>
+            <span>物流查询与安全确认操作</span>
           </div>
-          <el-tag type="success" effect="plain">只读</el-tag>
+          <el-tag type="success" effect="plain">确认后执行</el-tag>
         </div>
 
         <AgentMessageList
@@ -182,6 +229,11 @@ onMounted(initialize)
           :loading="conversationLoading"
           :responding="sending"
           :has-conversation="currentConversationId !== null"
+          :pending-actions="pendingActions"
+          :action-loading-id="actionLoadingId"
+          :can-operate="authStore.canOperate"
+          @confirm-action="handleConfirmAction"
+          @cancel-action="handleCancelAction"
         />
         <AgentComposer v-model="input" :sending="interactionLocked" @send="sendMessage" />
       </main>

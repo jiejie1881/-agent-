@@ -10,9 +10,10 @@ from app.agent.exceptions import (
 from app.agent.model_client import AgentModelClient
 from app.agent.model_types import AgentMessageRole, AgentModelMessage
 from app.agent.prompts.system_prompt import AGENT_SYSTEM_PROMPT
-from app.agent.tool_execution import AgentToolContext, AgentToolExecutorRegistry
+from app.agent.tool_execution import AgentToolContext, AgentToolExecutorRegistry, AgentToolResult
 from app.agent.tool_registry import AgentToolRegistry
 from app.core.config import get_settings
+from app.services.agent_pending_action_service import AgentPendingActionService
 
 
 class AgentService:
@@ -24,6 +25,7 @@ class AgentService:
         *,
         max_tool_calls: int | None = None,
         system_prompt: str = AGENT_SYSTEM_PROMPT,
+        pending_action_service: AgentPendingActionService | None = None,
     ) -> None:
         configured_limit = (
             get_settings().agent_max_tool_calls
@@ -37,6 +39,7 @@ class AgentService:
         self.executor_registry = executor_registry
         self.max_tool_calls = configured_limit
         self.system_prompt = system_prompt
+        self.pending_action_service = pending_action_service
 
     async def chat(
         self,
@@ -59,6 +62,8 @@ class AgentService:
         model_tools = self.tool_registry.to_openai_tools()
         tool_calls_count = 0
         used_tools: list[str] = []
+        pending_actions = []
+        created_write_signature: tuple[str, str] | None = None
 
         while True:
             response = await self.model_client.chat(messages, model_tools)
@@ -75,6 +80,7 @@ class AgentService:
                     content=response.content,
                     tool_calls_count=tool_calls_count,
                     used_tools=tuple(used_tools),
+                    pending_actions=tuple(pending_actions),
                 )
 
             messages.append(
@@ -84,20 +90,53 @@ class AgentService:
                     tool_calls=response.tool_calls,
                 )
             )
+            write_calls = [
+                call
+                for call in response.tool_calls
+                if self.tool_registry.get(call.name).requires_confirmation
+            ]
+            if len(write_calls) > 1:
+                raise AgentModelResponseError("单次请求只能生成一个待确认写操作")
             for tool_call in response.tool_calls:
                 if tool_calls_count >= self.max_tool_calls:
                     raise AgentMaxToolCallsError(self.max_tool_calls)
 
-                self.tool_registry.validate_arguments(
+                validated_arguments = self.tool_registry.validate_arguments(
                     tool_call.name,
                     tool_call.arguments,
                 )
                 tool_calls_count += 1
-                result = await self.executor_registry.execute(
-                    tool_call.name,
-                    tool_call.arguments,
-                    context,
-                )
+                definition = self.tool_registry.get(tool_call.name)
+                if definition.requires_confirmation:
+                    if self.pending_action_service is None:
+                        raise AgentModelResponseError("Agent写操作确认服务未配置")
+                    signature = (tool_call.name, validated_arguments.model_dump_json())
+                    if created_write_signature is not None:
+                        if signature != created_write_signature:
+                            raise AgentModelResponseError("单次请求只能生成一个待确认写操作")
+                        action = pending_actions[0]
+                    else:
+                        model = self.pending_action_service.create(
+                            definition, validated_arguments, context
+                        )
+                        action = self.pending_action_service.snapshot(model)
+                        pending_actions.append(action)
+                        created_write_signature = signature
+                    result = AgentToolResult.from_data(
+                        tool_call.name,
+                        {
+                            "status": "confirmation_required",
+                            "action_id": action.id,
+                            "summary": action.summary,
+                            "expires_at": action.expires_at,
+                        },
+                    )
+                else:
+                    result = await self.executor_registry.execute(
+                        tool_call.name,
+                        tool_call.arguments,
+                        context,
+                    )
                 used_tools.append(tool_call.name)
                 messages.append(
                     AgentModelMessage(

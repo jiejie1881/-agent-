@@ -16,6 +16,7 @@ from app.models.agent_conversation import (
     AgentConversation,
     AgentConversationMessage,
 )
+from app.models.agent_pending_action import AgentPendingAction
 
 __all__ = [
     "Terrain",
@@ -36,4 +37,5 @@ __all__ = [
     "AuditLog",
     "AgentConversation",
     "AgentConversationMessage",
+    "AgentPendingAction",
 ]

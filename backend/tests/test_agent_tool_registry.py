@@ -23,10 +23,12 @@ EXPECTED_TOOL_NAMES = [
     "get_dispatch_plan_detail",
     "get_unassigned_demands",
     "validate_dispatch_plan",
+    "move_delivery_demand",
+    "cancel_dispatch_plan",
 ]
 
 
-def test_registry_contains_all_six_tools_in_stable_order() -> None:
+def test_registry_contains_all_phase_two_tools_in_stable_order() -> None:
     registry = AgentToolRegistry()
 
     assert [item.name for item in registry.list_definitions()] == EXPECTED_TOOL_NAMES
@@ -114,7 +116,7 @@ def test_openai_tools_preserve_registry_order_and_schema() -> None:
 
     tools = registry.to_openai_tools()
 
-    assert len(tools) == 6
+    assert len(tools) == 8
     assert [tool["function"]["name"] for tool in tools] == EXPECTED_TOOL_NAMES
     assert all(tool["type"] == "function" for tool in tools)
     assert all(tool["function"]["parameters"]["type"] == "object" for tool in tools)
