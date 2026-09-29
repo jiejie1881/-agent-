@@ -40,6 +40,7 @@ function getErrorMessage(error: AxiosError<BackendErrorBody>): string {
   const status = error.response?.status
   const requestUrl = error.config?.url ?? ''
   const isAgentRequest = requestUrl.includes('/agent/')
+  const detail = error.response?.data?.detail
 
   if (code === 'AGENT_MODEL_TIMEOUT' || status === 504 && isAgentRequest) {
     return '智能调度助手响应超时，请重试'
@@ -49,10 +50,12 @@ function getErrorMessage(error: AxiosError<BackendErrorBody>): string {
     code === 'AGENT_MODEL_CONNECTION_ERROR' ||
     status === 503 && isAgentRequest
   ) {
-    return '智能调度助手当前不可用，请稍后重试'
+    return typeof detail === 'string' ? detail : '智能调度助手当前不可用，请稍后重试'
   }
   if (code === 'AGENT_MODEL_RESPONSE_ERROR' || status === 502 && isAgentRequest) {
-    return '智能调度助手暂时无法完成查询，请稍后重试'
+    return typeof detail === 'string'
+      ? detail
+      : '智能调度助手暂时无法完成查询，请稍后重试'
   }
   if (status === 404 && requestUrl.includes('/agent/conversations/')) {
     return '该会话不存在或无权访问'
@@ -60,8 +63,6 @@ function getErrorMessage(error: AxiosError<BackendErrorBody>): string {
   if (status === 403 && isAgentRequest) {
     return '当前账号没有使用智能调度助手的权限'
   }
-
-  const detail = error.response?.data?.detail
 
   if (typeof detail === 'string') {
     return detail

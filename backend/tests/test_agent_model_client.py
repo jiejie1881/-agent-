@@ -221,12 +221,14 @@ def test_missing_api_key_fails_only_when_agent_is_called() -> None:
     settings = _settings(agent_api_key=None)
     client = OpenAICompatibleModelClient(settings)
 
-    with pytest.raises(AgentModelConfigurationError):
+    with pytest.raises(AgentModelConfigurationError) as exc_info:
         asyncio.run(
             client.chat(
                 [AgentModelMessage(role=AgentMessageRole.USER, content="你好")]
             )
         )
+
+    assert exc_info.value.message == "AGENT_API_KEY未配置"
 
     settings_without_agent = Settings(
         _env_file=None,
@@ -276,6 +278,46 @@ def test_provider_error_response_does_not_expose_api_key() -> None:
 
     assert secret not in str(exc_info.value)
     assert exc_info.value.message == "Agent模型服务返回错误状态"
+
+
+def test_provider_invalid_model_uses_safe_configuration_hint() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            400,
+            json={
+                "code": 20012,
+                "message": "Model does not exist. Please check it carefully.",
+                "data": None,
+            },
+        )
+
+    with pytest.raises(AgentModelResponseError) as exc_info:
+        _chat(handler)
+
+    assert exc_info.value.message == (
+        "Agent模型不存在或不可用，请检查AGENT_MODEL"
+    )
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected_message"),
+    [
+        (401, "Agent模型认证失败，请检查AGENT_API_KEY"),
+        (429, "Agent模型请求过于频繁，请稍后重试"),
+        (404, "Agent模型接口不存在，请检查AGENT_BASE_URL"),
+    ],
+)
+def test_provider_http_status_uses_safe_actionable_message(
+    status_code: int,
+    expected_message: str,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status_code, json={"message": "provider detail"})
+
+    with pytest.raises(AgentModelResponseError) as exc_info:
+        _chat(handler)
+
+    assert exc_info.value.message == expected_message
 
 
 def test_malformed_provider_response_uses_unified_error() -> None:

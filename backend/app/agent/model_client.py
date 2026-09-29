@@ -81,8 +81,10 @@ class OpenAICompatibleModelClient(AgentModelClient):
             raise AgentModelTimeoutError() from None
         except httpx.RequestError:
             raise AgentModelConnectionError() from None
-        except httpx.HTTPStatusError:
-            raise AgentModelResponseError("Agent模型服务返回错误状态") from None
+        except httpx.HTTPStatusError as exc:
+            raise AgentModelResponseError(
+                self._safe_http_error_message(exc.response)
+            ) from None
 
         try:
             raw_response = response.json()
@@ -101,12 +103,55 @@ class OpenAICompatibleModelClient(AgentModelClient):
         )
         if provider not in self.SUPPORTED_PROVIDERS:
             raise AgentModelConfigurationError("不支持或未配置Agent模型Provider")
-        if not model or not api_key or not base_url:
-            raise AgentModelConfigurationError()
+        if not model:
+            raise AgentModelConfigurationError("AGENT_MODEL未配置")
+        if not api_key:
+            raise AgentModelConfigurationError("AGENT_API_KEY未配置")
+        if not base_url:
+            raise AgentModelConfigurationError("AGENT_BASE_URL未配置")
         parsed_url = urlparse(base_url)
         if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
             raise AgentModelConfigurationError("AGENT_BASE_URL不是有效的HTTP地址")
         return model, api_key, base_url
+
+    @classmethod
+    def _safe_http_error_message(cls, response: httpx.Response) -> str:
+        status_code = response.status_code
+        provider_message = cls._provider_error_message(response).lower()
+
+        if status_code in {401, 403}:
+            return "Agent模型认证失败，请检查AGENT_API_KEY"
+        model_error_markers = (
+            "model does not exist",
+            "model not found",
+            "unknown model",
+            "invalid model",
+            "模型不存在",
+            "模型未找到",
+        )
+        if any(marker in provider_message for marker in model_error_markers):
+            return "Agent模型不存在或不可用，请检查AGENT_MODEL"
+        if status_code == 429:
+            return "Agent模型请求过于频繁，请稍后重试"
+        if status_code == 404:
+            return "Agent模型接口不存在，请检查AGENT_BASE_URL"
+        return "Agent模型服务返回错误状态"
+
+    @staticmethod
+    def _provider_error_message(response: httpx.Response) -> str:
+        try:
+            payload = response.json()
+        except ValueError:
+            return ""
+        if not isinstance(payload, dict):
+            return ""
+        message = payload.get("message")
+        if isinstance(message, str):
+            return message
+        error = payload.get("error")
+        if isinstance(error, dict) and isinstance(error.get("message"), str):
+            return error["message"]
+        return ""
 
     @staticmethod
     def _serialize_message(message: AgentModelMessage) -> dict[str, Any]:
