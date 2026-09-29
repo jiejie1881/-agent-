@@ -13,7 +13,12 @@ from app.agent.tool_execution import AgentToolContext, AgentToolExecutorRegistry
 from app.agent.tool_registry import AgentToolRegistry
 from app.agent.write_tools import build_write_tool_executors
 from app.domain.enums import AgentPendingActionStatus, UserRole
-from app.domain.exceptions import AgentPendingActionError, NotFoundError, PermissionDeniedError
+from app.domain.exceptions import (
+    AgentPendingActionError,
+    DispatchAdjustmentValidationError,
+    NotFoundError,
+    PermissionDeniedError,
+)
 from app.models.audit_log import AuditLog
 from app.models.user import User
 from app.services.agent_pending_action_service import AgentPendingActionService
@@ -133,12 +138,21 @@ def test_pending_action_can_be_cancelled_without_business_change(client, session
     source = next(order for order in unchanged["orders"] if order["id"] == args["source_order_id"])
     assert args["delivery_demand_id"] in {item["delivery_demand_id"] for item in source["details"]}
 
+    with pytest.raises(AgentPendingActionError) as cancelled_confirm:
+        asyncio.run(service.confirm(conversation["id"], action.id, user))
+    assert cancelled_confirm.value.code == "AGENT_ACTION_NOT_PENDING"
+    assert session.scalar(
+        select(AuditLog).where(AuditLog.action == "DISPATCH_DEMAND_MOVED")
+    ) is None
+
 
 def test_pending_action_enforces_user_conversation_and_expiration(client, session):
-    service, user, conversation, _, _, action = create_move_action(client, session)
+    service, user, conversation, plan, args, action = create_move_action(client, session)
     other_conversation = client.post("/api/v1/agent/conversations").json()
     with pytest.raises(NotFoundError):
         service.cancel(other_conversation["id"], action.id, user)
+    with pytest.raises(NotFoundError):
+        asyncio.run(service.confirm(other_conversation["id"], action.id, user))
 
     other = AuthService(session).create_user("other-admin", "OtherAdmin123!", UserRole.ADMIN)
     with pytest.raises(NotFoundError):
@@ -150,6 +164,12 @@ def test_pending_action_enforces_user_conversation_and_expiration(client, sessio
         asyncio.run(service.confirm(conversation["id"], action.id, user))
     assert expired.value.code == "AGENT_ACTION_EXPIRED"
     assert service.repository.get(action.id).status == AgentPendingActionStatus.EXPIRED
+    unchanged = client.get(f"/api/v1/dispatch-plans/{plan['id']}").json()
+    source = next(order for order in unchanged["orders"] if order["id"] == args["source_order_id"])
+    assert args["delivery_demand_id"] in {item["delivery_demand_id"] for item in source["details"]}
+    assert session.scalar(
+        select(AuditLog).where(AuditLog.action == "DISPATCH_DEMAND_MOVED")
+    ) is None
 
 
 def test_viewer_cannot_create_write_pending_action(client, session):
@@ -215,3 +235,53 @@ def test_pending_action_api_confirms_and_rejects_second_confirmation(client, ses
     assert first.json()["action"]["status"] == "EXECUTED"
     assert second.status_code == 409
     assert second.json()["code"] == "AGENT_ACTION_ALREADY_EXECUTED"
+
+
+def test_pending_action_api_isolated_by_user_for_read_confirm_and_cancel(client, session):
+    _, _, conversation, _, _, action = create_move_action(client, session)
+    AuthService(session).create_user("isolated-admin", "OtherAdmin123!", UserRole.ADMIN)
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"username": "isolated-admin", "password": "OtherAdmin123!"},
+    )
+    other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    action_url = f"/api/v1/agent/conversations/{conversation['id']}/pending-actions/{action.id}"
+
+    assert client.get(
+        f"/api/v1/agent/conversations/{conversation['id']}", headers=other_headers
+    ).status_code == 404
+    assert client.post(f"{action_url}/confirm", headers=other_headers).status_code == 404
+    assert client.post(f"{action_url}/cancel", headers=other_headers).status_code == 404
+
+    assert service_status(session, action.id) == AgentPendingActionStatus.PENDING
+
+
+def test_failed_execution_rolls_back_move_audit_and_marks_action_failed(client, session):
+    service, user, conversation, plan, args, action = create_move_action(client, session)
+    target = next(order for order in plan["orders"] if order["id"] == args["target_order_id"])
+    attendances = client.get("/api/v1/vehicle-attendances?date=2026-09-24").json()
+    target_attendance = next(
+        item for item in attendances if item["vehicle_id"] == target["vehicle"]["id"]
+    )
+    assert client.patch(
+        f"/api/v1/vehicle-attendances/{target_attendance['id']}",
+        json={"available": False},
+    ).status_code == 200
+
+    with pytest.raises(DispatchAdjustmentValidationError):
+        asyncio.run(service.confirm(conversation["id"], action.id, user))
+
+    assert service_status(session, action.id) == AgentPendingActionStatus.FAILED
+    unchanged = client.get(f"/api/v1/dispatch-plans/{plan['id']}").json()
+    source = next(order for order in unchanged["orders"] if order["id"] == args["source_order_id"])
+    target = next(order for order in unchanged["orders"] if order["id"] == args["target_order_id"])
+    assert args["delivery_demand_id"] in {item["delivery_demand_id"] for item in source["details"]}
+    assert args["delivery_demand_id"] not in {item["delivery_demand_id"] for item in target["details"]}
+    assert session.scalar(
+        select(AuditLog).where(AuditLog.action == "DISPATCH_DEMAND_MOVED")
+    ) is None
+
+
+def service_status(session, action_id: int) -> AgentPendingActionStatus:
+    service, _, _ = build_pending_service(session)
+    return service.repository.get(action_id).status

@@ -117,14 +117,16 @@ class AgentPendingActionService:
             return action, result
         except BusinessError:
             self.session.rollback()
-            failed = self._get_owned(action_id, conversation_id, current_user.id, for_update=True)
-            if failed.status == AgentPendingActionStatus.PENDING:
-                failed.status = AgentPendingActionStatus.FAILED
-                self.session.commit()
+            self._mark_failed(action_id, conversation_id, current_user.id)
             raise
         except IntegrityError as exc:
             self.session.rollback()
+            self._mark_failed(action_id, conversation_id, current_user.id)
             raise AgentPendingActionError("AGENT_ACTION_EXECUTION_CONFLICT", "待确认操作执行冲突") from exc
+        except Exception:
+            self.session.rollback()
+            self._mark_failed(action_id, conversation_id, current_user.id)
+            raise
 
     def cancel(self, conversation_id: int, action_id: int, current_user: User) -> AgentPendingAction:
         action = self._get_owned(action_id, conversation_id, current_user.id, for_update=True)
@@ -197,6 +199,13 @@ class AgentPendingActionService:
         if action is None:
             raise NotFoundError("待确认操作不存在")
         return action
+
+    def _mark_failed(self, action_id: int, conversation_id: int, user_id: int) -> None:
+        """Persist execution failure only after the business transaction has rolled back."""
+        failed = self._get_owned(action_id, conversation_id, user_id, for_update=True)
+        if failed.status == AgentPendingActionStatus.PENDING:
+            failed.status = AgentPendingActionStatus.FAILED
+            self.session.commit()
 
     @staticmethod
     def _is_expired(action: AgentPendingAction) -> bool:

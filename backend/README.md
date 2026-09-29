@@ -1,10 +1,12 @@
-# 物流车辆智能分配系统后端
+# 物流车辆智能分配系统
 
 ## 1. 项目简介
 
-本项目是物流车辆智能分配系统的后端服务，使用 FastAPI、SQLAlchemy、MySQL 和 Alembic 构建。
+本项目是一个可运行的物流车辆智能分配系统完整业务 Demo / 内部测试版。后端使用 FastAPI、SQLAlchemy、MySQL 和 Alembic，前端使用 Vue 3、Vite、Element Plus、Pinia 和 Axios，并包含可查询真实业务数据、经人工确认后执行受控写操作的 AI Agent。
 
 当前版本已经形成后端业务 V1 闭环：维护基础资料和每日业务数据，使用贪心策略生成派车草稿，保存同日多版本方案，支持人工调整、发布前重新校验、方案发布，以及配送任务的开始和完成。
+
+当前版本尚不等于生产就绪系统。高级地图与 ETA、完整并发压测、生产监控、备份恢复和 CI/CD 仍待建设。
 
 系统已加入 JWT 登录和 RBAC。角色包括 `ADMIN`、`DISPATCHER`、`VIEWER`；所有 `/api/v1` 业务接口均由后端校验登录状态和权限。
 
@@ -99,9 +101,10 @@
 
 ### 数据库与测试
 
-- 当前共有 12 个 Alembic migration；
+- 当前共有 14 个 Alembic migration；
 - pytest 使用 SQLite 内存数据库，与开发 MySQL 隔离；
-- 当前全量测试结果：`91 passed`。
+- 当前全量测试结果：`228 passed, 1 warning`；
+- Agent Phase 2 另已在真实 MySQL 上验证重复确认和两个请求并发确认同一个 Pending Action 的边界。
 
 ### 认证与权限
 
@@ -123,14 +126,26 @@
 - 审计查询接口和前端审计页面仅允许 `ADMIN` 访问；
 - 密码、密码哈希和 Token 不写入审计变更信息。
 
+### AI Agent
+
+- Agent Phase 1 已完成：真实模型普通对话、六个只读 Tool、Tool Schema、Registry、Executor、Tool Loop、持久化 Conversation 多轮会话和 Vue 智能调度助手；
+- Agent Phase 2 第一版已完成：`move_delivery_demand`、`cancel_dispatch_plan` 两个受控写 Tool；
+- 写 Tool 首次调用只创建持久化 `Pending Action`，不会直接修改业务数据；
+- Vue 确认卡展示操作摘要、关键参数、风险、状态及确认/取消入口；
+- Confirm 时重新检查用户、Conversation、过期时间、Action 状态和 RBAC，再调用现有业务 Service；
+- 业务修改、成功 Audit 和 Action `EXECUTED` 在同一事务提交；执行失败会回滚业务和成功审计，并将 Action 记录为 `FAILED`；
+- MySQL 行锁和状态校验防止重复或并发确认导致同一操作执行两次；
+- API Key、模型和 Provider 配置只从环境变量读取，不写死在代码或仓库中。
+
 ## 4. 项目目录结构
 
 ```text
 backend/
 ├── alembic/
 │   ├── env.py                         # Alembic 运行环境
-│   └── versions/                      # 12 个数据库迁移版本
+│   └── versions/                      # 14 个数据库迁移版本
 ├── app/
+│   ├── agent/                         # ModelClient、Prompt、Tool Schema/Registry/Executor 与读写 Tool
 │   ├── api/
 │   │   ├── dependencies.py            # FastAPI 数据库依赖
 │   │   ├── exception_handlers.py      # 统一业务异常响应
@@ -166,6 +181,24 @@ backend/
 └── README.md
 ```
 
+前端位于项目根目录的 `frontend/`：
+
+```text
+frontend/src/
+├── api/                               # Axios 业务 API 封装
+├── layouts/                           # 后台管理布局
+├── router/                            # Vue Router 与权限路由
+├── stores/                            # Pinia 状态
+├── types/                             # TypeScript 类型
+└── views/
+    ├── agent/                         # Agent Chat 与 Pending Action 确认卡
+    ├── dispatch/                      # 自动派车、方案列表与详情
+    ├── operations/                    # 出勤与配送需求
+    ├── terrains/ routes/ stores/      # 地形、线路、门店资料
+    ├── vehicle-types/ vehicles/       # 车型与车辆资料
+    └── users/ audit-logs/             # 用户权限与审计
+```
+
 分层约定：
 
 - API 层只负责接收参数和返回响应；
@@ -192,6 +225,10 @@ backend/
 | `DispatchOrder` | 方案中的单车、单时段、单趟、单线路任务 |
 | `DispatchOrderDetail` | 任务与配送需求的分配明细及数量 |
 | `DispatchPlanUnassignedDemand` | 当前方案未分配的需求及失败原因 |
+| `User` | 登录账号、角色、启用状态和 Token 版本 |
+| `AuditLog` | 核心业务成功操作的审计记录 |
+| `AgentConversation` / `AgentConversationMessage` | 用户隔离的 Agent 多轮会话和消息 |
+| `AgentPendingAction` | 写 Tool 的用户、会话、参数、风险、过期时间和执行状态 |
 
 派车方案关系：
 
@@ -203,6 +240,31 @@ DispatchPlan
 ```
 
 `DispatchOrder` 通过 `(plan_id, vehicle_id, period, trip_no)` 保证同一方案内逻辑车次唯一。
+
+### Agent 调用与确认机制
+
+只读调用链：
+
+```text
+Vue → Agent API → AgentService → ModelClient → LLM Tool Call
+→ Registry → Executor → Service → Repository → MySQL
+→ Tool Result → LLM → Response → Conversation
+```
+
+写操作调用链：
+
+```text
+LLM Write Tool Call
+→ Pending Action(PENDING)
+→ Vue 确认卡
+→ 用户点击 Confirm API
+→ RBAC 二次校验 + MySQL 行锁
+→ Write Tool Executor
+→ DispatchPlanService
+→ 业务修改 + Audit + Action(EXECUTED) 原子提交
+```
+
+Pending Action 允许的终态包括 `EXECUTED`、`CANCELLED`、`EXPIRED` 和 `FAILED`。客户端只提交 Action ID；执行时使用的是后端持久化参数，因此自然语言中的“我已经确认”或“不用问我”不能代替正式 Confirm API。
 
 ## 6. 派车规则
 
@@ -417,7 +479,17 @@ SQL_ECHO=false
 JWT_SECRET_KEY=replace-with-a-long-random-secret
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=480
 JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+AGENT_PROVIDER=openai-compatible
+AGENT_MODEL=
+AGENT_API_KEY=
+AGENT_BASE_URL=
+AGENT_TIMEOUT=30
+AGENT_MAX_TOOL_CALLS=5
+AGENT_PENDING_ACTION_EXPIRE_MINUTES=15
+AGENT_HISTORY_MAX_MESSAGES=20
 ```
+
+Agent 配置可选；未配置模型时不影响物流业务接口启动，只会让 Agent 调用返回明确的配置错误。真实 `AGENT_API_KEY` 只写入本地 `.env`，不要提交到 Git。
 
 ### 11.4 启动服务
 
@@ -454,6 +526,8 @@ uvicorn app.main:app --reload
 → 20260925_10_auth_rbac
 → 20260927_11_user_token_version
 → 20260927_12_audit_logs
+→ 20260928_13_agent_conversations
+→ 20260929_14_agent_pending_actions
 ```
 
 升级到最新版本：
@@ -493,7 +567,7 @@ python -m pytest tests/test_dispatch_plan_publish_validation.py -q
 测试配置位于 `pyproject.toml`，测试夹具会把 `DATABASE_URL` 切换为 SQLite 内存数据库，不会修改开发 MySQL 数据。当前基线为：
 
 ```text
-91 passed
+228 passed, 1 warning
 ```
 
 ## 14. 当前未完成功能
@@ -511,8 +585,9 @@ python -m pytest tests/test_dispatch_plan_publish_validation.py -q
 - 人工新建/删除派车任务、换车、整单换线路；
 - GPS、实时车辆位置和路况；
 - 消息通知、导出和打印；
-- MySQL 集成测试、并发压力测试和性能优化；
-- 生产监控、日志采集和备份恢复方案。
+- 持续集成中的自动化 MySQL 测试、更大规模并发压力测试和性能优化；
+- 生产监控、日志采集和备份恢复方案；
+- Agent Memory、RAG、MCP、Multi-Agent 和 Streaming（当前阶段均未实现）。
 
 ## 15. 后续 Roadmap
 
@@ -544,8 +619,16 @@ python -m pytest tests/test_dispatch_plan_publish_validation.py -q
 - 继续完善 Vue 3 + Element Plus 调度工作台；
 - 增加方案版本对比、人工拖拽调整和校验反馈；
 - 增加运行日志、指标和监控告警；
-- 增加 MySQL 集成测试、端到端测试和压力测试；
+- 增加持续运行的 MySQL 集成测试、端到端测试和压力测试；
 - 完善多环境发布流水线、备份恢复演练和部署回滚方案。
+
+### 阶段 E：Agent 后续演进
+
+- 在当前 Human-in-the-loop 和审计边界稳定后，再评估更多写 Tool；
+- 根据真实知识检索需求评估 RAG；
+- 根据长期偏好需求评估 Memory；
+- 在单 Agent 职责无法覆盖时再评估 MCP 或 Multi-Agent；
+- 增加流式响应、模型可观测性和更系统的 Agent 评测。
 
 ## 16. Docker Compose 启动
 
