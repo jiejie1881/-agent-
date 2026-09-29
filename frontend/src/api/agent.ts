@@ -7,6 +7,10 @@ import type {
   AgentPendingActionExecutionResponse,
 } from '@/types/agent'
 
+// A tool loop can require more than one provider request. Keep this longer than
+// the per-model-call backend timeout without changing other business API calls.
+const AGENT_REQUEST_TIMEOUT_MS = 120_000
+
 export function createConversation() {
   return http.post<AgentConversation>('/agent/conversations')
 }
@@ -23,11 +27,16 @@ export function sendConversationMessage(conversationId: number, message: string)
   return http.post<AgentSendMessageResponse>(
     `/agent/conversations/${conversationId}/messages`,
     { message },
+    { timeout: AGENT_REQUEST_TIMEOUT_MS },
   )
 }
 
 export function sendStatelessChat(message: string) {
-  return http.post<AgentStatelessChatResponse>('/agent/chat', { message })
+  return http.post<AgentStatelessChatResponse>(
+    '/agent/chat',
+    { message },
+    { timeout: AGENT_REQUEST_TIMEOUT_MS },
+  )
 }
 
 export function confirmPendingAction(conversationId: number, actionId: number) {
