@@ -1,0 +1,32 @@
+from functools import lru_cache
+
+from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    app_name: str = "物流车辆智能分配系统"
+    api_v1_prefix: str = "/api/v1"
+    database_url: str = Field(min_length=1)
+    sql_echo: bool = False
+    jwt_secret_key: str = Field(min_length=32)
+    jwt_access_token_expire_minutes: int = 480
+    jwt_refresh_token_expire_days: int = 7
+    agent_provider: str | None = None
+    agent_model: str | None = None
+    agent_api_key: SecretStr | None = None
+    agent_base_url: str | None = None
+    agent_timeout: float = Field(default=30.0, gt=0)
+    agent_max_tool_calls: int = Field(default=5, ge=1, le=20)
+    agent_history_max_messages: int = Field(default=20, ge=1, le=100)
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
