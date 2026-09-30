@@ -29,6 +29,9 @@ class PersistedDispatchOrderDetailResponse(BaseModel):
     store_id: int
     store_code: str
     store_name: str
+    store_address: str | None
+    store_longitude: Decimal | None
+    store_latitude: Decimal | None
     quantity: Decimal
     status: DeliveryDemandStatus
 
@@ -55,6 +58,9 @@ class PersistedUnassignedDemandResponse(BaseModel):
     store_id: int
     store_code: str
     store_name: str
+    store_address: str | None
+    store_longitude: Decimal | None
+    store_latitude: Decimal | None
     period: DeliveryPeriod
     quantity: Decimal
     reasons: list[str]

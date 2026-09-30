@@ -22,6 +22,8 @@ const form = reactive<StorePayload>({
   address: null,
   contact_name: null,
   contact_phone: null,
+  longitude: null,
+  latitude: null,
   is_active: true,
 })
 
@@ -50,6 +52,8 @@ function resetForm() {
     address: source?.address ?? null,
     contact_name: source?.contact_name ?? null,
     contact_phone: source?.contact_phone ?? null,
+    longitude: source?.longitude == null ? null : Number(source.longitude),
+    latitude: source?.latitude == null ? null : Number(source.latitude),
     is_active: source?.is_active ?? true,
   })
   nextTick(() => formRef.value?.clearValidate())
@@ -70,6 +74,8 @@ async function handleSubmit() {
     address: normalizeOptional(form.address),
     contact_name: normalizeOptional(form.contact_name),
     contact_phone: normalizeOptional(form.contact_phone),
+    longitude: form.longitude,
+    latitude: form.latitude,
     is_active: form.is_active,
   })
 }
@@ -107,6 +113,12 @@ watch(
         </el-form-item>
         <el-form-item label="联系电话" prop="contact_phone">
           <el-input v-model="form.contact_phone" maxlength="30" placeholder="选填" />
+        </el-form-item>
+        <el-form-item label="经度" prop="longitude">
+          <el-input-number v-model="form.longitude" :min="-180" :max="180" :precision="7" controls-position="right" placeholder="选填" />
+        </el-form-item>
+        <el-form-item label="纬度" prop="latitude">
+          <el-input-number v-model="form.latitude" :min="-90" :max="90" :precision="7" controls-position="right" placeholder="选填" />
         </el-form-item>
         <el-form-item class="form-grid__full" label="启用状态" prop="is_active">
           <el-switch v-model="form.is_active" active-text="启用" inactive-text="停用" />

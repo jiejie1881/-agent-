@@ -70,6 +70,9 @@ export interface PersistedDispatchOrderDetail {
   store_id: number
   store_code: string
   store_name: string
+  store_address: string | null
+  store_longitude: string | null
+  store_latitude: string | null
   quantity: string
   status: DeliveryDemandStatus
 }
@@ -90,6 +93,9 @@ export interface PersistedUnassignedDemand {
   store_id: number
   store_code: string
   store_name: string
+  store_address: string | null
+  store_longitude: string | null
+  store_latitude: string | null
   period: DeliveryPeriod
   quantity: string
   reasons: string[]

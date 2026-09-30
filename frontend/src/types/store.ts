@@ -8,6 +8,8 @@ export interface Store extends TimestampFields {
   address: string | null
   contact_name: string | null
   contact_phone: string | null
+  longitude: string | null
+  latitude: string | null
   is_active: boolean
 }
 
@@ -17,6 +19,8 @@ export interface StorePayload {
   address: string | null
   contact_name: string | null
   contact_phone: string | null
+  longitude: number | null
+  latitude: number | null
   is_active: boolean
 }
 

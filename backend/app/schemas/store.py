@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field, field_validator
+from decimal import Decimal
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.common import TimestampSchema
 from app.schemas.route import RouteResponse
@@ -10,6 +12,8 @@ class StoreBase(BaseModel):
     address: str | None = Field(default=None, max_length=255)
     contact_name: str | None = Field(default=None, max_length=100)
     contact_phone: str | None = Field(default=None, max_length=30)
+    longitude: Decimal | None = Field(default=None, ge=-180, le=180, decimal_places=7)
+    latitude: Decimal | None = Field(default=None, ge=-90, le=90, decimal_places=7)
     is_active: bool = True
 
     @field_validator("code", "name", mode="before")
@@ -34,6 +38,12 @@ class StoreBase(BaseModel):
             return value or None
         return value
 
+    @model_validator(mode="after")
+    def coordinates_are_complete(self):
+        if (self.longitude is None) != (self.latitude is None):
+            raise ValueError("经度和纬度必须同时填写")
+        return self
+
 
 class StoreCreate(StoreBase):
     pass
@@ -45,7 +55,18 @@ class StoreUpdate(BaseModel):
     address: str | None = Field(default=None, max_length=255)
     contact_name: str | None = Field(default=None, max_length=100)
     contact_phone: str | None = Field(default=None, max_length=30)
+    longitude: Decimal | None = Field(default=None, ge=-180, le=180, decimal_places=7)
+    latitude: Decimal | None = Field(default=None, ge=-90, le=90, decimal_places=7)
     is_active: bool | None = None
+
+    @model_validator(mode="after")
+    def coordinates_are_complete_when_both_present(self):
+        fields = self.model_fields_set
+        if ("longitude" in fields) != ("latitude" in fields):
+            raise ValueError("经度和纬度必须同时修改")
+        if "longitude" in fields and ((self.longitude is None) != (self.latitude is None)):
+            raise ValueError("经度和纬度必须同时填写或同时清空")
+        return self
 
     @field_validator("code", "name", mode="before")
     @classmethod

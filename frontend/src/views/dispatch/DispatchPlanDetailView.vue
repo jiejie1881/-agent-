@@ -33,6 +33,7 @@ import type {
 } from '@/types/dispatch-plan'
 import type { DeliveryDemandStatus } from '@/types/delivery-demand'
 import { useAuthStore } from '@/stores/auth'
+import DispatchRouteMap from '@/views/dispatch/components/DispatchRouteMap.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -417,6 +418,8 @@ onMounted(loadPlan)
           <div><span>配送日期</span><strong class="summary-date">{{ plan.delivery_date }}</strong></div>
         </div>
       </div>
+
+      <DispatchRouteMap v-if="plan.orders.some((order) => order.details.some((detail) => detail.store_latitude && detail.store_longitude))" :orders="plan.orders" />
 
       <div class="section-heading">
         <div>

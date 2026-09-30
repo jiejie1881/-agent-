@@ -1,5 +1,9 @@
 # 物流车辆智能分配系统
 
+## Demo
+
+面试与项目展示请参考：[项目演示流程](../docs/项目演示流程.md)。
+
 ## 1. 项目简介
 
 本项目是一个可运行的物流车辆智能分配系统完整业务 Demo / 内部测试版。后端使用 FastAPI、SQLAlchemy、MySQL 和 Alembic，前端使用 Vue 3、Vite、Element Plus、Pinia 和 Axios，并包含可查询真实业务数据、经人工确认后执行受控写操作的 AI Agent。
@@ -101,9 +105,9 @@
 
 ### 数据库与测试
 
-- 当前共有 14 个 Alembic migration；
+- 当前共有 15 个 Alembic migration；
 - pytest 使用 SQLite 内存数据库，与开发 MySQL 隔离；
-- 当前全量测试结果：`228 passed, 1 warning`；
+- 当前全量测试结果：`229 passed, 1 warning`；
 - Agent Phase 2 另已在真实 MySQL 上验证重复确认和两个请求并发确认同一个 Pending Action 的边界。
 
 ### 认证与权限
@@ -143,7 +147,7 @@
 backend/
 ├── alembic/
 │   ├── env.py                         # Alembic 运行环境
-│   └── versions/                      # 14 个数据库迁移版本
+│   └── versions/                      # 15 个数据库迁移版本
 ├── app/
 │   ├── agent/                         # ModelClient、Prompt、Tool Schema/Registry/Executor 与读写 Tool
 │   ├── api/
@@ -528,6 +532,7 @@ uvicorn app.main:app --reload
 → 20260927_12_audit_logs
 → 20260928_13_agent_conversations
 → 20260929_14_agent_pending_actions
+→ 20260930_15_store_coordinates
 ```
 
 升级到最新版本：
@@ -567,14 +572,14 @@ python -m pytest tests/test_dispatch_plan_publish_validation.py -q
 测试配置位于 `pyproject.toml`，测试夹具会把 `DATABASE_URL` 切换为 SQLite 内存数据库，不会修改开发 MySQL 数据。当前基线为：
 
 ```text
-228 passed, 1 warning
+229 passed, 1 warning
 ```
 
 ## 14. 当前未完成功能
 
 以下能力当前代码尚未实现：
 
-- 地图服务接入和真实路线计算；
+- 生产级地图/路由服务、配额与可用性保障（当前 Demo 使用 Leaflet + OpenStreetMap + OSRM 公共服务展示路线）；
 - 配送顺序、距离和路径优化；
 - 真实出发时间、配送耗时和返仓时间；
 - 多趟任务的时间冲突检查；
@@ -601,7 +606,7 @@ python -m pytest tests/test_dispatch_plan_publish_validation.py -q
 
 ### 阶段 B：地图与时间模型
 
-- 接入地图服务；
+- 将当前公共 OSRM Demo 路由替换为具有 SLA 的生产服务；
 - 计算门店间距离和预计时间；
 - 增加仓库出发、返仓和下一趟装货时间；
 - 校验同车多趟时间不重叠；
