@@ -55,6 +55,7 @@ const activeMenu = computed(() => {
         <el-sub-menu index="master">
           <template #title><el-icon><SetUp /></el-icon><span>基础资料</span></template>
           <el-menu-item index="/master/terrains"><el-icon><MapLocation /></el-icon><span>地形管理</span></el-menu-item>
+          <el-menu-item index="/master/cargo-categories"><el-icon><Tickets /></el-icon><span>货物分类</span></el-menu-item>
           <el-menu-item index="/master/routes"><el-icon><Guide /></el-icon><span>线路管理</span></el-menu-item>
           <el-menu-item index="/master/stores"><el-icon><OfficeBuilding /></el-icon><span>门店管理</span></el-menu-item>
           <el-menu-item index="/master/vehicle-types"><el-icon><Connection /></el-icon><span>车型管理</span></el-menu-item>

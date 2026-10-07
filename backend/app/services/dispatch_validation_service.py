@@ -10,6 +10,7 @@ from app.repositories.vehicle_attendance_repository import VehicleAttendanceRepo
 from app.repositories.vehicle_repository import (
     VehicleRepository,
     VehicleTypeTerrainPermissionRepository,
+    VehicleTypeCargoCapabilityRepository,
 )
 from app.schemas.dispatch_validation import (
     ConstraintValidationResponse,
@@ -27,6 +28,7 @@ class DispatchValidationService:
         self.route_terrain_repository = RouteTerrainRepository(session)
         self.store_route_repository = StoreRouteRepository(session)
         self.permission_repository = VehicleTypeTerrainPermissionRepository(session)
+        self.cargo_capability_repository = VehicleTypeCargoCapabilityRepository(session)
 
     def validate_dispatch(
         self, data: DispatchValidationRequest
@@ -74,6 +76,9 @@ class DispatchValidationService:
             terrain_permission = self.permission_repository.get_permission(
                 vehicle.vehicle_type_id, route_terrain.terrain_id
             )
+        cargo_capability = self.cargo_capability_repository.get_capability(
+            vehicle.vehicle_type_id, demand.cargo_category_id
+        )
 
         context = DispatchValidationContext(
             dispatch_date=demand.date,
@@ -90,5 +95,14 @@ class DispatchValidationService:
             terrain_configured=route_terrain is not None,
             terrain_name=(route_terrain.terrain.name if route_terrain else None),
             terrain_allowed=terrain_permission is not None,
+            cargo_category_id=demand.cargo_category_id,
+            cargo_category_name=demand.cargo_category.name,
+            cargo_capability_exists=cargo_capability is not None,
+            cargo_allowed=(cargo_capability.is_allowed if cargo_capability else False),
+            requires_temperature_control=demand.requires_temperature_control,
+            demand_min_temperature=demand.min_temperature,
+            demand_max_temperature=demand.max_temperature,
+            vehicle_min_temperature=(cargo_capability.min_temperature if cargo_capability else None),
+            vehicle_max_temperature=(cargo_capability.max_temperature if cargo_capability else None),
         )
         return validate_dispatch(context)

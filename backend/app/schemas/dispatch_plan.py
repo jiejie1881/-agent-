@@ -10,6 +10,7 @@ from app.domain.enums import (
     DeliveryDemandStatus,
     DeliveryPeriod,
     DispatchPlanStatus,
+    DeliveryPriority,
 )
 from app.schemas.auto_dispatch import DispatchVehicleResponse
 
@@ -34,6 +35,12 @@ class PersistedDispatchOrderDetailResponse(BaseModel):
     store_latitude: Decimal | None
     quantity: Decimal
     status: DeliveryDemandStatus
+    cargo_category_code: str
+    cargo_category_name: str
+    priority: DeliveryPriority
+    requires_temperature_control: bool
+    min_temperature: Decimal | None
+    max_temperature: Decimal | None
 
 
 class PersistedDispatchRouteResponse(BaseModel):
@@ -64,6 +71,12 @@ class PersistedUnassignedDemandResponse(BaseModel):
     period: DeliveryPeriod
     quantity: Decimal
     reasons: list[str]
+    cargo_category_code: str
+    cargo_category_name: str
+    priority: DeliveryPriority
+    requires_temperature_control: bool
+    min_temperature: Decimal | None
+    max_temperature: Decimal | None
 
 
 class DispatchPlanDetailResponse(DispatchPlanSummaryResponse):

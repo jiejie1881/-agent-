@@ -21,6 +21,12 @@ class DeliveryDemandStatus(str, Enum):
     CANCELLED = "CANCELLED"
 
 
+class DeliveryPriority(str, Enum):
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
+
+
 class VehicleTypeCode(str, Enum):
     FOUR_METER = "FOUR_METER"
     BIG_VAN = "BIG_VAN"

@@ -15,7 +15,10 @@ class DeliveryDemandRepository(BaseRepository[DeliveryDemand]):
     def get(self, entity_id: int) -> DeliveryDemand | None:
         statement = (
             select(DeliveryDemand)
-            .options(joinedload(DeliveryDemand.store))
+            .options(
+                joinedload(DeliveryDemand.store),
+                joinedload(DeliveryDemand.cargo_category),
+            )
             .where(DeliveryDemand.id == entity_id)
         )
         return self.session.scalar(statement)
@@ -28,7 +31,10 @@ class DeliveryDemandRepository(BaseRepository[DeliveryDemand]):
         offset: int,
         limit: int,
     ) -> list[DeliveryDemand]:
-        statement = select(DeliveryDemand).options(joinedload(DeliveryDemand.store))
+        statement = select(DeliveryDemand).options(
+            joinedload(DeliveryDemand.store),
+            joinedload(DeliveryDemand.cargo_category),
+        )
         if demand_date is not None:
             statement = statement.where(DeliveryDemand.date == demand_date)
         if store_id is not None:

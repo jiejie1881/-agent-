@@ -22,6 +22,15 @@ class DispatchValidationContext:
     terrain_configured: bool
     terrain_name: str | None
     terrain_allowed: bool
+    cargo_category_id: int | None = None
+    cargo_category_name: str | None = None
+    cargo_capability_exists: bool = True
+    cargo_allowed: bool = True
+    requires_temperature_control: bool = False
+    demand_min_temperature: Decimal | None = None
+    demand_max_temperature: Decimal | None = None
+    vehicle_min_temperature: Decimal | None = None
+    vehicle_max_temperature: Decimal | None = None
 
 
 @dataclass(frozen=True)

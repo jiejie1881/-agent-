@@ -65,7 +65,11 @@ def test_validate_dispatch_returns_legal(client):
     assert body["is_valid"] is True
     assert body["result"] == "合法"
     assert body["failure_reasons"] == []
-    assert len(body["constraints"]) == 5
+    assert len(body["constraints"]) == 7
+    assert {item["constraint"] for item in body["constraints"]} >= {
+        "CargoCompatibilityConstraint",
+        "TemperatureConstraint",
+    }
     assert all(item["passed"] for item in body["constraints"])
 
 

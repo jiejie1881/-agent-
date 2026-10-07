@@ -1,5 +1,12 @@
 from app.dispatch_engine.constraints import LoadRangeConstraint
 from app.dispatch_engine.models import EngineDemand, EngineVehicle, LoadedDemand
+from app.domain.enums import DeliveryPriority
+
+PRIORITY_WEIGHT = {
+    DeliveryPriority.URGENT: 300,
+    DeliveryPriority.HIGH: 200,
+    DeliveryPriority.NORMAL: 100,
+}
 
 
 class LoadOptimizer:
@@ -17,7 +24,10 @@ class LoadOptimizer:
         selected: list[LoadedDemand] = []
         total = vehicle.min_load * 0
 
-        for demand in sorted(demands, key=lambda item: (-item.quantity, item.id)):
+        for demand in sorted(
+            demands,
+            key=lambda item: (-PRIORITY_WEIGHT[item.priority], -item.quantity, item.id),
+        ):
             proposed_total = total + demand.quantity
             if self.load_constraint.does_not_exceed_maximum(
                 vehicle, proposed_total

@@ -2,7 +2,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.domain.enums import VehicleTypeCode
-from app.models.vehicle import Vehicle, VehicleType, VehicleTypeTerrainPermission
+from app.models.vehicle import (
+    Vehicle, VehicleType, VehicleTypeCargoCapability,
+    VehicleTypeTerrainPermission,
+)
 from app.repositories.base import BaseRepository
 
 
@@ -80,3 +83,46 @@ class VehicleTypeTerrainPermissionRepository(
             .order_by(VehicleTypeTerrainPermission.id)
         )
         return list(self.session.scalars(statement))
+
+
+class VehicleTypeCargoCapabilityRepository(
+    BaseRepository[VehicleTypeCargoCapability]
+):
+    def __init__(self, session: Session) -> None:
+        super().__init__(session, VehicleTypeCargoCapability)
+
+    def list_by_vehicle_type(
+        self, vehicle_type_id: int
+    ) -> list[VehicleTypeCargoCapability]:
+        statement = (
+            select(VehicleTypeCargoCapability)
+            .options(joinedload(VehicleTypeCargoCapability.cargo_category))
+            .where(VehicleTypeCargoCapability.vehicle_type_id == vehicle_type_id)
+            .order_by(VehicleTypeCargoCapability.cargo_category_id)
+        )
+        return list(self.session.scalars(statement))
+
+    def get_capability(
+        self, vehicle_type_id: int, cargo_category_id: int
+    ) -> VehicleTypeCargoCapability | None:
+        return self.session.scalar(
+            select(VehicleTypeCargoCapability).where(
+                VehicleTypeCargoCapability.vehicle_type_id == vehicle_type_id,
+                VehicleTypeCargoCapability.cargo_category_id == cargo_category_id,
+            )
+        )
+
+    def replace(
+        self,
+        vehicle_type_id: int,
+        capabilities: list[VehicleTypeCargoCapability],
+    ) -> list[VehicleTypeCargoCapability]:
+        existing = self.list_by_vehicle_type(vehicle_type_id)
+        for item in existing:
+            self.session.delete(item)
+        self.session.flush()
+        self.session.add_all(capabilities)
+        self.session.flush()
+        for item in capabilities:
+            self.session.refresh(item)
+        return self.list_by_vehicle_type(vehicle_type_id)

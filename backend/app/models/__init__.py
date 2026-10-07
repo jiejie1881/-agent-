@@ -1,4 +1,5 @@
 from app.models.delivery_demand import DeliveryDemand
+from app.models.cargo_category import CargoCategory
 from app.models.dispatch_plan import (
     DispatchOrder,
     DispatchOrderDetail,
@@ -8,7 +9,12 @@ from app.models.dispatch_plan import (
 from app.models.route import Route, RouteTerrainConfig
 from app.models.store import Store, StoreRoute
 from app.models.terrain import Terrain
-from app.models.vehicle import Vehicle, VehicleType, VehicleTypeTerrainPermission
+from app.models.vehicle import (
+    Vehicle,
+    VehicleType,
+    VehicleTypeCargoCapability,
+    VehicleTypeTerrainPermission,
+)
 from app.models.vehicle_attendance import VehicleAttendance
 from app.models.user import User
 from app.models.audit_log import AuditLog
@@ -28,6 +34,8 @@ __all__ = [
     "Vehicle",
     "VehicleAttendance",
     "DeliveryDemand",
+    "CargoCategory",
+    "VehicleTypeCargoCapability",
     "VehicleTypeTerrainPermission",
     "DispatchPlan",
     "DispatchOrder",

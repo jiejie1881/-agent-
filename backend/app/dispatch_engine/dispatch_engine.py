@@ -2,7 +2,7 @@ from collections import Counter
 from decimal import Decimal
 
 from app.dispatch_engine.candidate_builder import CandidateBuilder
-from app.dispatch_engine.load_optimizer import LoadOptimizer
+from app.dispatch_engine.load_optimizer import LoadOptimizer, PRIORITY_WEIGHT
 from app.dispatch_engine.models import (
     DispatchEngineInput,
     DispatchEngineResult,
@@ -46,6 +46,7 @@ class DispatchEngine:
                 routes=engine_input.routes,
                 store_route_ids=engine_input.store_route_ids,
                 permissions=engine_input.permissions,
+                cargo_capabilities=engine_input.cargo_capabilities,
                 trip_counts=trip_counts,
                 vehicle_trip_counts=vehicle_trip_counts,
             )
@@ -66,6 +67,7 @@ class DispatchEngine:
         routes: dict[int, EngineRoute],
         store_route_ids: dict[int, set[int]],
         permissions: set[tuple[int, int]],
+        cargo_capabilities,
         trip_counts: Counter[tuple[DeliveryPeriod, VehicleTypeCode]],
         vehicle_trip_counts: Counter[tuple[int, DeliveryPeriod]],
     ) -> tuple[list[TripPlan], list[UnassignedDemand]]:
@@ -76,6 +78,7 @@ class DispatchEngine:
             store_route_ids=store_route_ids,
             permissions=permissions,
             period=period,
+            cargo_capabilities=cargo_capabilities,
         )
         options = {
             (option.demand_id, option.vehicle_id, option.route_id)
@@ -163,7 +166,10 @@ class DispatchEngine:
                 priority = self.priority_rules.vehicle_sort_key(
                     vehicle, period, trip_counts, vehicle_trip_counts
                 )
-                proposal_key = (*priority, -total_load, route.id)
+                highest_demand_priority = max(
+                    PRIORITY_WEIGHT[item.demand.priority] for item in loaded
+                )
+                proposal_key = (-highest_demand_priority, *priority, -total_load, route.id)
                 proposals.append((proposal_key, vehicle, route, loaded))
 
         if not proposals:

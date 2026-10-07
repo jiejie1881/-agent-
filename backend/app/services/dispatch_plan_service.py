@@ -597,6 +597,12 @@ class DispatchPlanService:
                             store_latitude=detail.delivery_demand.store.latitude,
                             quantity=detail.quantity,
                             status=detail.delivery_demand.status,
+                            cargo_category_code=detail.delivery_demand.cargo_category.code,
+                            cargo_category_name=detail.delivery_demand.cargo_category.name,
+                            priority=detail.delivery_demand.priority,
+                            requires_temperature_control=detail.delivery_demand.requires_temperature_control,
+                            min_temperature=detail.delivery_demand.min_temperature,
+                            max_temperature=detail.delivery_demand.max_temperature,
                         )
                         for detail in sorted(order.details, key=lambda item: item.id)
                     ],
@@ -616,6 +622,12 @@ class DispatchPlanService:
                     period=item.delivery_demand.period,
                     quantity=item.delivery_demand.quantity,
                     reasons=item.reasons,
+                    cargo_category_code=item.delivery_demand.cargo_category.code,
+                    cargo_category_name=item.delivery_demand.cargo_category.name,
+                    priority=item.delivery_demand.priority,
+                    requires_temperature_control=item.delivery_demand.requires_temperature_control,
+                    min_temperature=item.delivery_demand.min_temperature,
+                    max_temperature=item.delivery_demand.max_temperature,
                 )
                 for item in sorted(
                     plan.unassigned_demands, key=lambda record: record.id

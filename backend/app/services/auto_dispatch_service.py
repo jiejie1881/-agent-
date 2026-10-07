@@ -99,6 +99,12 @@ class AutoDispatchService:
                             store_code=item.demand.store_code,
                             store_name=item.demand.store_name,
                             quantity=item.quantity,
+                            cargo_category_code=item.demand.cargo_category_code,
+                            cargo_category_name=item.demand.cargo_category_name,
+                            priority=item.demand.priority,
+                            requires_temperature_control=item.demand.requires_temperature_control,
+                            min_temperature=item.demand.min_temperature,
+                            max_temperature=item.demand.max_temperature,
                         )
                         for item in trip.demands
                     ],
@@ -115,6 +121,12 @@ class AutoDispatchService:
                     period=item.demand.period,
                     quantity=item.demand.quantity,
                     reasons=list(item.reasons),
+                    cargo_category_code=item.demand.cargo_category_code,
+                    cargo_category_name=item.demand.cargo_category_name,
+                    priority=item.demand.priority,
+                    requires_temperature_control=item.demand.requires_temperature_control,
+                    min_temperature=item.demand.min_temperature,
+                    max_temperature=item.demand.max_temperature,
                 )
                 for item in result.unassigned_demands
             ],

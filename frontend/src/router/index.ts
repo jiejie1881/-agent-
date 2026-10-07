@@ -16,8 +16,15 @@ import { useAuthStore } from '@/stores/auth'
 import UserListView from '@/views/users/UserListView.vue'
 import AuditLogListView from '@/views/audit-logs/AuditLogListView.vue'
 import AgentChatView from '@/views/agent/AgentChatView.vue'
+import CargoCategoryListView from '@/views/cargo-categories/CargoCategoryListView.vue'
 
 const children: RouteRecordRaw[] = [
+  {
+    path: 'master/cargo-categories',
+    name: 'cargo-categories',
+    component: CargoCategoryListView,
+    meta: { title: '货物分类管理', group: '基础资料' },
+  },
   {
     path: 'master/terrains',
     name: 'terrains',

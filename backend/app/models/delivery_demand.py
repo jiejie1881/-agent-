@@ -1,10 +1,10 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, Enum, ForeignKey, Numeric, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, Date, Enum, ForeignKey, Numeric, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.domain.enums import DeliveryDemandStatus, DeliveryPeriod
+from app.domain.enums import DeliveryDemandStatus, DeliveryPeriod, DeliveryPriority
 from app.domain.delivery_demand_policy import (
     can_edit_delivery_demand_core_fields,
 )
@@ -19,6 +19,12 @@ class DeliveryDemand(TimestampMixin, Base):
             "date", "store_id", "period", name="uq_demand_date_store_period"
         ),
         CheckConstraint("quantity > 0", name="ck_delivery_demand_quantity_positive"),
+        CheckConstraint(
+            "requires_temperature_control = 0 OR "
+            "(min_temperature IS NOT NULL AND max_temperature IS NOT NULL "
+            "AND min_temperature <= max_temperature)",
+            name="ck_delivery_demand_temperature_range",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -37,6 +43,26 @@ class DeliveryDemand(TimestampMixin, Base):
         index=True,
     )
     quantity: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    cargo_category_id: Mapped[int] = mapped_column(
+        ForeignKey("cargo_categories.id", ondelete="RESTRICT"), index=True
+    )
+    priority: Mapped[DeliveryPriority] = mapped_column(
+        Enum(
+            DeliveryPriority,
+            native_enum=False,
+            create_constraint=True,
+            validate_strings=True,
+            name="delivery_priority",
+        ),
+        nullable=False,
+        default=DeliveryPriority.NORMAL,
+        server_default=DeliveryPriority.NORMAL.value,
+    )
+    requires_temperature_control: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    min_temperature: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    max_temperature: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     status: Mapped[DeliveryDemandStatus] = mapped_column(
         Enum(
             DeliveryDemandStatus,
@@ -51,6 +77,7 @@ class DeliveryDemand(TimestampMixin, Base):
     )
 
     store: Mapped["Store"] = relationship()
+    cargo_category: Mapped["CargoCategory"] = relationship(back_populates="demands")
 
     @property
     def core_fields_editable(self) -> bool:
@@ -58,3 +85,4 @@ class DeliveryDemand(TimestampMixin, Base):
 
 
 from app.models.store import Store  # noqa: E402
+from app.models.cargo_category import CargoCategory  # noqa: E402

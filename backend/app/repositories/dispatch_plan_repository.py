@@ -169,7 +169,14 @@ class DispatchPlanRepository:
             .selectinload(DispatchOrder.details)
             .joinedload(DispatchOrderDetail.delivery_demand)
             .joinedload(DeliveryDemand.store),
+            selectinload(DispatchPlan.orders)
+            .selectinload(DispatchOrder.details)
+            .joinedload(DispatchOrderDetail.delivery_demand)
+            .joinedload(DeliveryDemand.cargo_category),
             selectinload(DispatchPlan.unassigned_demands)
             .joinedload(DispatchPlanUnassignedDemand.delivery_demand)
             .joinedload(DeliveryDemand.store),
+            selectinload(DispatchPlan.unassigned_demands)
+            .joinedload(DispatchPlanUnassignedDemand.delivery_demand)
+            .joinedload(DeliveryDemand.cargo_category),
         )

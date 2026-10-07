@@ -25,6 +25,12 @@ export interface DispatchStoreAllocation {
   store_code: string
   store_name: string
   quantity: string
+  cargo_category_code: string
+  cargo_category_name: string
+  priority: 'NORMAL' | 'HIGH' | 'URGENT'
+  requires_temperature_control: boolean
+  min_temperature: string | null
+  max_temperature: string | null
 }
 
 export interface AutoDispatchTrip {
@@ -44,6 +50,12 @@ export interface AutoDispatchUnassignedDemand {
   period: DeliveryPeriod
   quantity: string
   reasons: string[]
+  cargo_category_code: string
+  cargo_category_name: string
+  priority: 'NORMAL' | 'HIGH' | 'URGENT'
+  requires_temperature_control: boolean
+  min_temperature: string | null
+  max_temperature: string | null
 }
 
 export interface AutoDispatchResult {
@@ -75,6 +87,12 @@ export interface PersistedDispatchOrderDetail {
   store_latitude: string | null
   quantity: string
   status: DeliveryDemandStatus
+  cargo_category_code: string
+  cargo_category_name: string
+  priority: 'NORMAL' | 'HIGH' | 'URGENT'
+  requires_temperature_control: boolean
+  min_temperature: string | null
+  max_temperature: string | null
 }
 
 export interface PersistedDispatchOrder {
@@ -99,6 +117,12 @@ export interface PersistedUnassignedDemand {
   period: DeliveryPeriod
   quantity: string
   reasons: string[]
+  cargo_category_code: string
+  cargo_category_name: string
+  priority: 'NORMAL' | 'HIGH' | 'URGENT'
+  requires_temperature_control: boolean
+  min_temperature: string | null
+  max_temperature: string | null
 }
 
 export interface DispatchPlanDetail extends DispatchPlanSummary {

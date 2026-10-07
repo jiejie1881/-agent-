@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from app.domain.enums import VehicleTypeCode
 from app.schemas.common import TimestampSchema
 from app.schemas.terrain import TerrainResponse
+from app.schemas.cargo_category import CargoCategoryResponse
 
 
 class VehicleTypeBase(BaseModel):
@@ -129,3 +130,43 @@ class VehicleTypeTerrainPermissionResponse(TimestampSchema):
     vehicle_type_id: int
     terrain_id: int
     terrain: TerrainResponse
+
+
+class VehicleTypeCargoCapabilityInput(BaseModel):
+    cargo_category_id: int = Field(gt=0)
+    is_allowed: bool = True
+    min_temperature: Decimal | None = Field(default=None, max_digits=5, decimal_places=2)
+    max_temperature: Decimal | None = Field(default=None, max_digits=5, decimal_places=2)
+
+    @model_validator(mode="after")
+    def validate_temperature_range(self):
+        if (self.min_temperature is None) != (self.max_temperature is None):
+            raise ValueError("车型温控最低温度和最高温度必须同时填写")
+        if (
+            self.min_temperature is not None
+            and self.max_temperature is not None
+            and self.min_temperature > self.max_temperature
+        ):
+            raise ValueError("车型温控最低温度不能大于最高温度")
+        return self
+
+
+class VehicleTypeCargoCapabilityReplace(BaseModel):
+    capabilities: list[VehicleTypeCargoCapabilityInput]
+
+    @model_validator(mode="after")
+    def validate_unique_categories(self):
+        ids = [item.cargo_category_id for item in self.capabilities]
+        if len(ids) != len(set(ids)):
+            raise ValueError("同一货物分类不能重复配置")
+        return self
+
+
+class VehicleTypeCargoCapabilityResponse(TimestampSchema):
+    id: int
+    vehicle_type_id: int
+    cargo_category_id: int
+    is_allowed: bool
+    min_temperature: Decimal | None
+    max_temperature: Decimal | None
+    cargo_category: CargoCategoryResponse

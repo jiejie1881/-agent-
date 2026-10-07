@@ -1,19 +1,27 @@
+from __future__ import annotations
+
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
 from app.domain.exceptions import ConflictError, NotFoundError
-from app.models.vehicle import Vehicle, VehicleType, VehicleTypeTerrainPermission
+from app.models.vehicle import (
+    Vehicle, VehicleType, VehicleTypeCargoCapability,
+    VehicleTypeTerrainPermission,
+)
+from app.repositories.cargo_category_repository import CargoCategoryRepository
 from app.repositories.terrain_repository import TerrainRepository
 from app.repositories.vehicle_repository import (
     VehicleRepository,
     VehicleTypeRepository,
     VehicleTypeTerrainPermissionRepository,
+    VehicleTypeCargoCapabilityRepository,
 )
 from app.schemas.vehicle import (
     VehicleCreate,
     VehicleTypeCreate,
     VehicleTypeUpdate,
+    VehicleTypeCargoCapabilityReplace,
     VehicleUpdate,
 )
 from app.services.base import BaseService
@@ -23,6 +31,7 @@ class VehicleTypeService(BaseService):
     def __init__(self, session: Session) -> None:
         super().__init__(session)
         self.repository = VehicleTypeRepository(session)
+        self.cargo_category_repository = CargoCategoryRepository(session)
 
     def list(self, offset: int = 0, limit: int = 20) -> list[VehicleType]:
         return self.repository.list(offset, limit)
@@ -44,9 +53,20 @@ class VehicleTypeService(BaseService):
         if self.repository.get_by_name(data.name):
             raise ConflictError("车辆类型名称已存在")
         vehicle_type = VehicleType(**data.model_dump())
-        return self._commit(
-            lambda: self.repository.add(vehicle_type), "车辆类型编码或名称已存在"
-        )
+        def action() -> VehicleType:
+            created = self.repository.add(vehicle_type)
+            normal = self.cargo_category_repository.get_by_code("NORMAL")
+            if normal is not None:
+                self.session.add(
+                    VehicleTypeCargoCapability(
+                        vehicle_type_id=created.id,
+                        cargo_category_id=normal.id,
+                        is_allowed=True,
+                    )
+                )
+                self.session.flush()
+            return created
+        return self._commit(action, "车辆类型编码或名称已存在")
 
     def update(self, vehicle_type_id: int, data: VehicleTypeUpdate) -> VehicleType:
         vehicle_type = self.get(vehicle_type_id)
@@ -152,4 +172,42 @@ class VehicleTypeTerrainPermissionService(BaseService):
             raise NotFoundError("地形通行权限不存在")
         self._commit(
             lambda: self.repository.delete(permission), "无法删除地形通行权限"
+        )
+
+
+class VehicleTypeCargoCapabilityService(BaseService):
+    def __init__(self, session: Session) -> None:
+        super().__init__(session)
+        self.vehicle_type_repository = VehicleTypeRepository(session)
+        self.category_repository = CargoCategoryRepository(session)
+        self.repository = VehicleTypeCargoCapabilityRepository(session)
+
+    def _validate_vehicle_type(self, vehicle_type_id: int) -> None:
+        if self.vehicle_type_repository.get(vehicle_type_id) is None:
+            raise NotFoundError("车辆类型不存在")
+
+    def list(self, vehicle_type_id: int) -> list[VehicleTypeCargoCapability]:
+        self._validate_vehicle_type(vehicle_type_id)
+        return self.repository.list_by_vehicle_type(vehicle_type_id)
+
+    def replace(
+        self, vehicle_type_id: int, data: VehicleTypeCargoCapabilityReplace
+    ) -> list[VehicleTypeCargoCapability]:
+        self._validate_vehicle_type(vehicle_type_id)
+        capabilities: list[VehicleTypeCargoCapability] = []
+        for item in data.capabilities:
+            category = self.category_repository.get(item.cargo_category_id)
+            if category is None:
+                raise NotFoundError("货物分类不存在")
+            if not category.is_active and item.is_allowed:
+                raise ConflictError(f"货物分类 {category.name} 已停用")
+            capabilities.append(
+                VehicleTypeCargoCapability(
+                    vehicle_type_id=vehicle_type_id,
+                    **item.model_dump(),
+                )
+            )
+        return self._commit(
+            lambda: self.repository.replace(vehicle_type_id, capabilities),
+            "车型运输能力配置重复或无效",
         )
