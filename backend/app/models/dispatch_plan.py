@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -10,11 +10,19 @@ from sqlalchemy import (
     ForeignKey,
     Numeric,
     Index,
+    String,
+    Text,
+    DateTime,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.domain.enums import DeliveryPeriod, DispatchPlanStatus
+from app.domain.enums import (
+    DeliveryFailureReason,
+    DeliveryPeriod,
+    DeliveryStopStatus,
+    DispatchPlanStatus,
+)
 from app.infrastructure.database.base import Base
 from app.models.mixins import TimestampMixin
 
@@ -127,9 +135,54 @@ class DispatchOrderDetail(Base):
         ForeignKey("delivery_demands.id", ondelete="RESTRICT"), index=True
     )
     quantity: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    delivery_status: Mapped[DeliveryStopStatus] = mapped_column(
+        Enum(
+            DeliveryStopStatus,
+            native_enum=False,
+            create_constraint=True,
+            validate_strings=True,
+            name="delivery_stop_status",
+        ),
+        nullable=False,
+        default=DeliveryStopStatus.PENDING,
+        server_default=DeliveryStopStatus.PENDING.value,
+        index=True,
+    )
+    arrived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    receiver_name: Mapped[str | None] = mapped_column(String(100))
+    receiver_phone: Mapped[str | None] = mapped_column(String(30))
+    failure_reason: Mapped[DeliveryFailureReason | None] = mapped_column(
+        Enum(
+            DeliveryFailureReason,
+            native_enum=False,
+            create_constraint=True,
+            validate_strings=True,
+            name="delivery_failure_reason",
+        )
+    )
+    driver_remark: Mapped[str | None] = mapped_column(Text)
 
     dispatch_order: Mapped[DispatchOrder] = relationship(back_populates="details")
     delivery_demand: Mapped["DeliveryDemand"] = relationship()
+    proofs: Mapped[list["DeliveryProof"]] = relationship(
+        back_populates="stop", cascade="all, delete-orphan"
+    )
+
+
+class DeliveryProof(TimestampMixin, Base):
+    __tablename__ = "delivery_proofs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    dispatch_order_detail_id: Mapped[int] = mapped_column(
+        ForeignKey("dispatch_order_details.id", ondelete="CASCADE"), index=True
+    )
+    file_path: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(nullable=False)
+
+    stop: Mapped[DispatchOrderDetail] = relationship(back_populates="proofs")
 
 
 class DispatchPlanUnassignedDemand(Base):

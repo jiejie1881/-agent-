@@ -21,6 +21,9 @@ ROLE_PERMISSIONS = {
         Permission.DISPATCH_WRITE,
     },
     UserRole.VIEWER: {Permission.READ, Permission.AGENT_READ},
+    # Drivers use the isolated /api/driver surface. They must not inherit
+    # management-console read access simply because they have a valid JWT.
+    UserRole.DRIVER: set(),
 }
 
 

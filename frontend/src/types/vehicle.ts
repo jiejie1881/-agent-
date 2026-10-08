@@ -24,6 +24,7 @@ export interface Vehicle extends TimestampFields {
   code: string
   plate_number: string
   vehicle_type_id: number
+  driver_user_id: number | null
   is_active: boolean
   vehicle_type: VehicleType
 }
@@ -32,6 +33,7 @@ export interface VehiclePayload {
   code: string
   plate_number: string
   vehicle_type_id: number
+  driver_user_id: number | null
   is_active: boolean
 }
 

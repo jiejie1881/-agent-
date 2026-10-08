@@ -37,6 +37,29 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
     DISPATCHER = "DISPATCHER"
     VIEWER = "VIEWER"
+    DRIVER = "DRIVER"
+
+
+class DriverTaskStatus(str, Enum):
+    PUBLISHED = "PUBLISHED"
+    DELIVERING = "DELIVERING"
+    COMPLETED = "COMPLETED"
+    MIXED = "MIXED"
+
+
+class DeliveryStopStatus(str, Enum):
+    PENDING = "PENDING"
+    ARRIVED = "ARRIVED"
+    SIGNED = "SIGNED"
+    FAILED = "FAILED"
+
+
+class DeliveryFailureReason(str, Enum):
+    STORE_CLOSED = "STORE_CLOSED"
+    REJECTED = "REJECTED"
+    ADDRESS_ERROR = "ADDRESS_ERROR"
+    CARGO_DAMAGED = "CARGO_DAMAGED"
+    OTHER = "OTHER"
 
 
 class AgentConversationMessageRole(str, Enum):

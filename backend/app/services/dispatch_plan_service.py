@@ -4,7 +4,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain.constraints import LoadConstraint
-from app.domain.enums import DeliveryDemandStatus, DispatchPlanStatus
+from app.domain.enums import (
+    DeliveryDemandStatus,
+    DeliveryStopStatus,
+    DispatchPlanStatus,
+)
 from app.domain.exceptions import (
     BusinessError,
     ConflictError,
@@ -207,6 +211,19 @@ class DispatchPlanService:
                     f"只有PUBLISHED方案的任务可以{action}"
                 )
             order = self._find_order(plan, order_id, "配送任务")
+            if target_status == DeliveryDemandStatus.COMPLETED:
+                for detail in order.details:
+                    if detail.delivery_demand.status not in allowed_current:
+                        raise ConflictError(
+                            f"需求{detail.delivery_demand_id}当前状态"
+                            f"{detail.delivery_demand.status.value}不允许此操作"
+                        )
+                if any(
+                    detail.delivery_status
+                    not in {DeliveryStopStatus.SIGNED, DeliveryStopStatus.FAILED}
+                    for detail in order.details
+                ):
+                    raise ConflictError("仍有未完成配送的门店")
             self.demand_status_service.transition_many(
                 {detail.delivery_demand_id for detail in order.details},
                 target_status,

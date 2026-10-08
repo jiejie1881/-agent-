@@ -70,6 +70,7 @@ class VehicleBase(BaseModel):
     code: str = Field(min_length=1, max_length=50, pattern=r"^[A-Za-z0-9_-]+$")
     plate_number: str = Field(min_length=1, max_length=20)
     vehicle_type_id: int = Field(gt=0)
+    driver_user_id: int | None = Field(default=None, gt=0)
     is_active: bool = True
 
     @field_validator("code", "plate_number", mode="before")
@@ -97,6 +98,7 @@ class VehicleUpdate(BaseModel):
     code: str | None = Field(default=None, min_length=1, max_length=50, pattern=r"^[A-Za-z0-9_-]+$")
     plate_number: str | None = Field(default=None, min_length=1, max_length=20)
     vehicle_type_id: int | None = Field(default=None, gt=0)
+    driver_user_id: int | None = Field(default=None, gt=0)
     is_active: bool | None = None
 
     @field_validator("code", "plate_number", mode="before")

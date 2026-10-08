@@ -39,11 +39,15 @@ services:
       AGENT_MAX_TOOL_CALLS: ${AGENT_MAX_TOOL_CALLS:-5}
       AGENT_PENDING_ACTION_EXPIRE_MINUTES: ${AGENT_PENDING_ACTION_EXPIRE_MINUTES:-15}
       AGENT_HISTORY_MAX_MESSAGES: ${AGENT_HISTORY_MAX_MESSAGES:-20}
+      UPLOAD_ROOT: ${UPLOAD_ROOT:-/app/uploads}
+      DELIVERY_PROOF_MAX_BYTES: ${DELIVERY_PROOF_MAX_BYTES:-5242880}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       mysql:
         condition: service_healthy
+    volumes:
+      - delivery_proofs:/app/uploads
     healthcheck:
       test:
         - CMD
@@ -75,3 +79,4 @@ services:
 
 volumes:
   mysql_data:
+  delivery_proofs:

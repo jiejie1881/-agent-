@@ -25,6 +25,9 @@ htmlcov/
 .ruff_cache/
 .cache/
 *.log
+backend/uploads/*
+!backend/uploads/.gitkeep
+miniprogram/project.private.config.json
 .idea/
 .vscode/
 .DS_Store

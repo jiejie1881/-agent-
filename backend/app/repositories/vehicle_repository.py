@@ -55,6 +55,14 @@ class VehicleRepository(BaseRepository[Vehicle]):
             select(Vehicle).where(Vehicle.plate_number == plate_number)
         )
 
+    def get_by_driver_user_id(self, driver_user_id: int) -> Vehicle | None:
+        statement = (
+            select(Vehicle)
+            .options(joinedload(Vehicle.vehicle_type))
+            .where(Vehicle.driver_user_id == driver_user_id)
+        )
+        return self.session.scalar(statement)
+
 
 class VehicleTypeTerrainPermissionRepository(
     BaseRepository[VehicleTypeTerrainPermission]

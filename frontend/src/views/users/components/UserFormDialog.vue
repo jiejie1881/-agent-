@@ -37,7 +37,7 @@ async function submit() {
     <el-form ref="formRef" :model="form" :rules="rules" label-width="90px" :class="{ 'with-alert': editingSelf }">
       <el-form-item label="用户名" prop="username"><el-input v-model="form.username" maxlength="100" /></el-form-item>
       <el-form-item v-if="!user" label="初始密码" prop="password"><el-input v-model="form.password" type="password" show-password maxlength="200" autocomplete="new-password" /></el-form-item>
-      <el-form-item label="角色" prop="role"><el-select v-model="form.role" :disabled="editingSelf" style="width: 100%"><el-option label="管理员（ADMIN）" value="ADMIN" /><el-option label="调度员（DISPATCHER）" value="DISPATCHER" /><el-option label="查看者（VIEWER）" value="VIEWER" /></el-select></el-form-item>
+      <el-form-item label="角色" prop="role"><el-select v-model="form.role" :disabled="editingSelf" style="width: 100%"><el-option label="管理员（ADMIN）" value="ADMIN" /><el-option label="调度员（DISPATCHER）" value="DISPATCHER" /><el-option label="查看者（VIEWER）" value="VIEWER" /><el-option label="司机（DRIVER）" value="DRIVER" /></el-select></el-form-item>
       <el-form-item label="启用状态"><el-switch v-model="form.is_active" :disabled="editingSelf" active-text="启用" inactive-text="禁用" /></el-form-item>
     </el-form>
     <template #footer><el-button :disabled="submitting" @click="emit('update:modelValue', false)">取消</el-button><el-button type="primary" :loading="submitting" @click="submit">保存</el-button></template>

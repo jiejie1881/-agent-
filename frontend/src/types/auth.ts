@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'DISPATCHER' | 'VIEWER'
+export type UserRole = 'ADMIN' | 'DISPATCHER' | 'VIEWER' | 'DRIVER'
 
 export interface AuthUser {
   id: number

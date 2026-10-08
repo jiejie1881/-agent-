@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     agent_max_tool_calls: int = Field(default=5, ge=1, le=20)
     agent_history_max_messages: int = Field(default=20, ge=1, le=100)
     agent_pending_action_expire_minutes: int = Field(default=15, ge=1, le=60)
+    upload_root: str = "uploads"
+    delivery_proof_max_bytes: int = Field(default=5 * 1024 * 1024, ge=1024)
 
     model_config = SettingsConfigDict(
         env_file=".env",

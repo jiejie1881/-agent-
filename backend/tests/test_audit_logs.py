@@ -1,7 +1,8 @@
 from sqlalchemy import select
 
-from app.domain.enums import UserRole
+from app.domain.enums import DeliveryStopStatus, UserRole
 from app.models.audit_log import AuditLog
+from app.models.dispatch_plan import DispatchOrderDetail
 from app.services.audit_log_service import AuditAction
 from app.services.auth_service import AuthService
 from tests.test_delivery_demand_api import create_store
@@ -69,6 +70,13 @@ def test_dispatch_lifecycle_writes_expected_audit_actions(client, session):
         f"/api/v1/dispatch-plans/{generated['plan_id']}"
         f"/orders/{order_id}/start-delivery"
     ).status_code == 200
+    for stop in session.scalars(
+        select(DispatchOrderDetail).where(
+            DispatchOrderDetail.dispatch_order_id == order_id
+        )
+    ):
+        stop.delivery_status = DeliveryStopStatus.SIGNED
+    session.commit()
     assert client.post(
         f"/api/v1/dispatch-plans/{generated['plan_id']}"
         f"/orders/{order_id}/complete"

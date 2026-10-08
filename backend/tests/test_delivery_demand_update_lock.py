@@ -1,3 +1,7 @@
+from sqlalchemy import select
+
+from app.domain.enums import DeliveryStopStatus
+from app.models.dispatch_plan import DispatchOrderDetail
 from tests.test_auto_dispatch_api import (
     create_terrain_route_and_stores,
     create_vehicle,
@@ -77,7 +81,7 @@ def test_published_demand_cannot_update_period(client):
     assert_locked(response, "PUBLISHED")
 
 
-def test_completed_demand_cannot_update_store(client):
+def test_completed_demand_cannot_update_store(client, session):
     terrain, _, stores = create_terrain_route_and_stores(client, [100])
     create_vehicle(
         client, terrain["id"], "SMALL_VAN", "小包", 1, 300, "湘A001"
@@ -97,6 +101,13 @@ def test_completed_demand_cannot_update_store(client):
         f"/api/v1/dispatch-plans/{generated['plan_id']}"
         f"/orders/{order_id}/start-delivery"
     )
+    for stop in session.scalars(
+        select(DispatchOrderDetail).where(
+            DispatchOrderDetail.dispatch_order_id == order_id
+        )
+    ):
+        stop.delivery_status = DeliveryStopStatus.SIGNED
+    session.commit()
     completed = client.post(
         f"/api/v1/dispatch-plans/{generated['plan_id']}"
         f"/orders/{order_id}/complete"

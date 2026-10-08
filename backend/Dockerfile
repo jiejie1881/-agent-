@@ -14,6 +14,7 @@ COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN pip install --upgrade pip && pip install .
 
 RUN groupadd --system app && useradd --system --gid app --home-dir /app app \
+    && mkdir -p /app/uploads \
     && chown -R app:app /app
 
 USER app

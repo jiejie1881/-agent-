@@ -1,8 +1,10 @@
 import pytest
+from sqlalchemy import select
 
-from app.domain.enums import DeliveryDemandStatus
+from app.domain.enums import DeliveryDemandStatus, DeliveryStopStatus
 from app.domain.exceptions import ConflictError
 from app.models.delivery_demand import DeliveryDemand
+from app.models.dispatch_plan import DispatchOrderDetail
 from app.services.delivery_demand_status_service import DeliveryDemandStatusService
 from tests.test_auto_dispatch_api import (
     create_terrain_route_and_stores,
@@ -53,7 +55,7 @@ def test_demand_without_plan_cannot_be_published_by_patch(client):
     ).json()["status"] == "PENDING"
 
 
-def test_business_actions_complete_legal_status_flow(client):
+def test_business_actions_complete_legal_status_flow(client, session):
     terrain, _, stores = create_terrain_route_and_stores(client, [100])
     create_vehicle(
         client, terrain["id"], "SMALL_VAN", "小包", 1, 300, "湘A001"
@@ -89,6 +91,14 @@ def test_business_actions_complete_legal_status_flow(client):
         f"/api/v1/delivery-demands/{demand_id}"
     ).json()["status"] == "DELIVERING"
 
+    for stop in session.scalars(
+        select(DispatchOrderDetail).where(
+            DispatchOrderDetail.dispatch_order_id == order_id
+        )
+    ):
+        stop.delivery_status = DeliveryStopStatus.SIGNED
+    session.commit()
+
     completed = client.post(
         f"/api/v1/dispatch-plans/{body['plan_id']}"
         f"/orders/{order_id}/complete"
@@ -123,7 +133,9 @@ def test_complete_before_start_returns_clear_illegal_transition(client):
     assert "不允许" in response.json()["detail"]
 
 
-def test_plan_remains_published_while_detail_exposes_order_execution_status(client):
+def test_plan_remains_published_while_detail_exposes_order_execution_status(
+    client, session
+):
     terrain, _, _ = create_terrain_route_and_stores(client, [100])
     create_vehicle(
         client, terrain["id"], "SMALL_VAN", "小包", 1, 300, "湘A001"
@@ -141,6 +153,14 @@ def test_plan_remains_published_while_detail_exposes_order_execution_status(clie
     delivering = client.get(f"/api/v1/dispatch-plans/{plan_id}").json()
     assert delivering["status"] == "PUBLISHED"
     assert delivering["orders"][0]["details"][0]["status"] == "DELIVERING"
+
+    for stop in session.scalars(
+        select(DispatchOrderDetail).where(
+            DispatchOrderDetail.dispatch_order_id == order_id
+        )
+    ):
+        stop.delivery_status = DeliveryStopStatus.SIGNED
+    session.commit()
 
     client.post(
         f"/api/v1/dispatch-plans/{plan_id}/orders/{order_id}/complete"

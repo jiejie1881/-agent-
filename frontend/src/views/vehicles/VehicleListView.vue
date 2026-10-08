@@ -4,13 +4,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 
 import { createVehicle, deleteVehicle, listVehicles, listVehicleTypes, updateVehicle } from '@/api/vehicles'
+import { listUsers } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 import type { Vehicle, VehiclePayload, VehicleType } from '@/types/vehicle'
+import type { AuthUser } from '@/types/auth'
 import VehicleFormDialog from '@/views/vehicles/components/VehicleFormDialog.vue'
 
 const authStore = useAuthStore()
 const loading = ref(false), submitting = ref(false), dialogVisible = ref(false)
 const vehicles = ref<Vehicle[]>([]), vehicleTypes = ref<VehicleType[]>([]), editing = ref<Vehicle | null>(null), keyword = ref('')
+const drivers = ref<AuthUser[]>([])
 const selectedTypeId = ref<number | null>(null)
 const filtered = computed(() => {
   const value = keyword.value.trim().toLowerCase()
@@ -18,7 +21,12 @@ const filtered = computed(() => {
 })
 async function loadData() {
   loading.value = true
-  try { const [vehicleResponse, typeResponse] = await Promise.all([listVehicles({ offset: 0, limit: 100 }), listVehicleTypes({ offset: 0, limit: 100 })]); vehicles.value = vehicleResponse.data; vehicleTypes.value = typeResponse.data } catch {} finally { loading.value = false }
+  try {
+    const [vehicleResponse, typeResponse] = await Promise.all([listVehicles({ offset: 0, limit: 100 }), listVehicleTypes({ offset: 0, limit: 100 })])
+    vehicles.value = vehicleResponse.data
+    vehicleTypes.value = typeResponse.data
+    if (authStore.canManageMasterData) drivers.value = (await listUsers()).data.filter((item) => item.role === 'DRIVER')
+  } catch {} finally { loading.value = false }
 }
 function openCreate() { editing.value = null; dialogVisible.value = true }
 function openEdit(item: Vehicle) { editing.value = item; dialogVisible.value = true }
@@ -43,11 +51,12 @@ onMounted(loadData)
         <el-table-column label="车辆" min-width="190"><template #default="{ row }"><strong>{{ row.plate_number }}</strong><div class="code">{{ row.code }}</div></template></el-table-column>
         <el-table-column label="车型" min-width="210"><template #default="{ row }"><div>{{ row.vehicle_type.name }}</div><div class="code">{{ row.vehicle_type.code }}</div></template></el-table-column>
         <el-table-column label="载重范围" min-width="190" align="center"><template #default="{ row }">{{ Number(row.vehicle_type.min_load).toFixed(2) }} ～ {{ Number(row.vehicle_type.max_load).toFixed(2) }}</template></el-table-column>
+        <el-table-column label="绑定司机" min-width="150"><template #default="{ row }">{{ drivers.find((item) => item.id === row.driver_user_id)?.username ?? '未绑定' }}</template></el-table-column>
         <el-table-column label="状态" width="100" align="center"><template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '启用' : '停用' }}</el-tag></template></el-table-column>
         <el-table-column v-if="authStore.canManageMasterData" label="操作" width="150" align="center" fixed="right"><template #default="{ row }"><el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button><el-button link type="danger" @click="remove(row)">删除</el-button></template></el-table-column>
       </el-table><div class="summary">共 {{ filtered.length }} 条车辆数据</div>
     </el-card>
-    <VehicleFormDialog v-if="authStore.canManageMasterData" v-model="dialogVisible" :vehicle="editing" :vehicle-types="vehicleTypes" :submitting="submitting" @submit="submit" />
+    <VehicleFormDialog v-if="authStore.canManageMasterData" v-model="dialogVisible" :vehicle="editing" :vehicle-types="vehicleTypes" :drivers="drivers" :submitting="submitting" @submit="submit" />
   </section>
 </template>
 

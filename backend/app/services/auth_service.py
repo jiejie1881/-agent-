@@ -10,7 +10,7 @@ from app.core.security import (
     verify_password,
 )
 from app.domain.enums import UserRole
-from app.domain.exceptions import AuthenticationError, ConflictError
+from app.domain.exceptions import AuthenticationError, BusinessError, ConflictError
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import TokenResponse, UserResponse
@@ -23,11 +23,30 @@ class AuthService:
         self.repository = UserRepository(session)
 
     def login(self, username: str, password: str) -> TokenResponse:
+        return self._login(username, password)
+
+    def login_driver(self, username: str, password: str) -> TokenResponse:
+        return self._login(username, password, required_role=UserRole.DRIVER)
+
+    def _login(
+        self,
+        username: str,
+        password: str,
+        required_role: UserRole | None = None,
+    ) -> TokenResponse:
         user = self.repository.get_by_username(username.strip())
         if user is None or not user.is_active or not verify_password(
             password, user.password_hash
         ):
             raise AuthenticationError("用户名或密码错误")
+        if required_role is not None and user.role != required_role:
+            raise AuthenticationError("用户名或密码错误")
+        if required_role == UserRole.DRIVER and user.assigned_vehicle is None:
+            raise BusinessError(
+                "当前司机未绑定车辆，请联系管理员",
+                status_code=409,
+                code="DRIVER_VEHICLE_UNBOUND",
+            )
         tokens = self._tokens_for(user)
         AuditLogService(self.session).add(
             user,

@@ -12,7 +12,7 @@ const authStore = useAuthStore()
 const loading = ref(false), submitting = ref(false), dialogVisible = ref(false)
 const users = ref<AuthUser[]>([]), editing = ref<AuthUser | null>(null), keyword = ref('')
 const filtered = computed(() => { const value = keyword.value.trim().toLowerCase(); return value ? users.value.filter((item) => `${item.username} ${item.role}`.toLowerCase().includes(value)) : users.value })
-const roleLabels = { ADMIN: '管理员', DISPATCHER: '调度员', VIEWER: '查看者' }
+const roleLabels = { ADMIN: '管理员', DISPATCHER: '调度员', VIEWER: '查看者', DRIVER: '司机' }
 function roleLabel(role: UserRole) { return roleLabels[role] }
 async function loadData() { loading.value = true; try { users.value = (await listUsers()).data } catch {} finally { loading.value = false } }
 function openCreate() { editing.value = null; dialogVisible.value = true }

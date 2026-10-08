@@ -24,6 +24,9 @@ class User(TimestampMixin, Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     token_version: Mapped[int] = mapped_column(default=0, nullable=False)
+    assigned_vehicle: Mapped["Vehicle | None"] = relationship(
+        back_populates="driver", uselist=False
+    )
     agent_conversations: Mapped[list["AgentConversation"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
@@ -38,3 +41,4 @@ class User(TimestampMixin, Base):
 
 from app.models.agent_conversation import AgentConversation  # noqa: E402
 from app.models.agent_pending_action import AgentPendingAction  # noqa: E402
+from app.models.vehicle import Vehicle  # noqa: E402

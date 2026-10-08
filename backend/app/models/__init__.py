@@ -3,6 +3,7 @@ from app.models.cargo_category import CargoCategory
 from app.models.dispatch_plan import (
     DispatchOrder,
     DispatchOrderDetail,
+    DeliveryProof,
     DispatchPlan,
     DispatchPlanUnassignedDemand,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "DispatchPlan",
     "DispatchOrder",
     "DispatchOrderDetail",
+    "DeliveryProof",
     "DispatchPlanUnassignedDemand",
     "User",
     "AuditLog",

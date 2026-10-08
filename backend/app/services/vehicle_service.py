@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.domain.enums import UserRole
 from app.domain.exceptions import ConflictError, NotFoundError
 from app.models.vehicle import (
     Vehicle, VehicleType, VehicleTypeCargoCapability,
@@ -11,6 +12,7 @@ from app.models.vehicle import (
 )
 from app.repositories.cargo_category_repository import CargoCategoryRepository
 from app.repositories.terrain_repository import TerrainRepository
+from app.repositories.user_repository import UserRepository
 from app.repositories.vehicle_repository import (
     VehicleRepository,
     VehicleTypeRepository,
@@ -94,6 +96,7 @@ class VehicleService(BaseService):
         super().__init__(session)
         self.repository = VehicleRepository(session)
         self.vehicle_type_repository = VehicleTypeRepository(session)
+        self.user_repository = UserRepository(session)
 
     def list(self, offset: int = 0, limit: int = 20) -> list[Vehicle]:
         return self.repository.list(offset, limit)
@@ -108,8 +111,20 @@ class VehicleService(BaseService):
         if self.vehicle_type_repository.get(vehicle_type_id) is None:
             raise NotFoundError("车辆类型不存在")
 
+    def _validate_driver(self, driver_user_id: int | None) -> None:
+        if driver_user_id is None:
+            return
+        driver = self.user_repository.get(driver_user_id)
+        if driver is None:
+            raise NotFoundError("司机账号不存在")
+        if driver.role != UserRole.DRIVER:
+            raise ConflictError("车辆只能绑定DRIVER角色账号")
+        if not driver.is_active:
+            raise ConflictError("不能绑定已停用的司机账号")
+
     def create(self, data: VehicleCreate) -> Vehicle:
         self._validate_vehicle_type(data.vehicle_type_id)
+        self._validate_driver(data.driver_user_id)
         if self.repository.get_by_code(data.code):
             raise ConflictError("车辆编码已存在")
         if self.repository.get_by_plate_number(data.plate_number):
@@ -124,6 +139,8 @@ class VehicleService(BaseService):
         updates = data.model_dump(exclude_unset=True)
         if "vehicle_type_id" in updates:
             self._validate_vehicle_type(updates["vehicle_type_id"])
+        if "driver_user_id" in updates:
+            self._validate_driver(updates["driver_user_id"])
         for field, value in updates.items():
             setattr(vehicle, field, value)
         return self._commit(

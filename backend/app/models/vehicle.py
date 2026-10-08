@@ -43,9 +43,16 @@ class Vehicle(TimestampMixin, Base):
     vehicle_type_id: Mapped[int] = mapped_column(
         ForeignKey("vehicle_types.id", ondelete="RESTRICT"), index=True
     )
+    driver_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        unique=True,
+        index=True,
+        nullable=True,
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     vehicle_type: Mapped[VehicleType] = relationship(back_populates="vehicles")
+    driver: Mapped["User | None"] = relationship(back_populates="assigned_vehicle")
 
 
 class VehicleTypeTerrainPermission(TimestampMixin, Base):
@@ -107,3 +114,4 @@ class VehicleTypeCargoCapability(TimestampMixin, Base):
 
 from app.models.terrain import Terrain  # noqa: E402
 from app.models.cargo_category import CargoCategory  # noqa: E402
+from app.models.user import User  # noqa: E402

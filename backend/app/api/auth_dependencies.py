@@ -86,3 +86,12 @@ def require_admin(current_user: CurrentUser) -> User:
     if current_user.role != UserRole.ADMIN:
         raise PermissionDeniedError()
     return current_user
+
+
+def require_driver(current_user: CurrentUser) -> User:
+    if current_user.role != UserRole.DRIVER:
+        raise PermissionDeniedError("只有司机账号可以访问司机端")
+    return current_user
+
+
+DriverUser = Annotated[User, Depends(require_driver)]
