@@ -17,6 +17,7 @@ import UserListView from '@/views/users/UserListView.vue'
 import AuditLogListView from '@/views/audit-logs/AuditLogListView.vue'
 import AgentChatView from '@/views/agent/AgentChatView.vue'
 import CargoCategoryListView from '@/views/cargo-categories/CargoCategoryListView.vue'
+import DailyExceptionView from '@/views/dispatch/DailyExceptionView.vue'
 
 const children: RouteRecordRaw[] = [
   {
@@ -72,6 +73,12 @@ const children: RouteRecordRaw[] = [
     name: 'auto-dispatch',
     component: AutoDispatchView,
     meta: { title: '自动派车', group: '派车中心' },
+  },
+  {
+    path: 'dispatch/exceptions',
+    name: 'daily-exceptions',
+    component: DailyExceptionView,
+    meta: { title: '每日异常工作台', group: '派车中心' },
   },
   {
     path: 'dispatch/plans',
