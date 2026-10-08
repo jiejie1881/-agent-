@@ -12,7 +12,7 @@
 
 当前版本尚不等于生产就绪系统。高级地图与 ETA、完整并发压测、生产监控、备份恢复和 CI/CD 仍待建设。
 
-系统已加入 JWT 登录和 RBAC。角色包括 `ADMIN`、`DISPATCHER`、`VIEWER`；所有 `/api/v1` 业务接口均由后端校验登录状态和权限。
+系统已加入 JWT 登录和 RBAC。角色包括 `ADMIN`、`DISPATCHER`、`VIEWER`、`DRIVER`；所有后台业务接口及独立 `/api/driver/*` 接口均由后端校验登录状态、角色与任务 ownership。
 
 自动派车 V1 强调规则正确、结构清晰和可维护性，不保证数学意义上的全局最优。目前不计算真实道路距离、行驶时间、返仓时间和路况。
 
@@ -51,7 +51,9 @@
         ↓
 按 DispatchOrder 开始配送，需求进入 DELIVERING
         ↓
-按 DispatchOrder 完成配送，需求进入 COMPLETED
+司机逐个停靠点到店并签收或标记配送失败
+        ↓
+所有停靠点进入 SIGNED / FAILED 后完成整趟，需求进入 COMPLETED
 ```
 
 无法形成合法车次的需求不会丢失，而是写入当前方案的 `unassigned_demands`，同时保留失败原因。
@@ -101,13 +103,15 @@
 - 同一天只允许一个 PUBLISHED 方案；
 - 发布新版本时处理旧的已发布方案；
 - 按任务开始配送、完成配送；
+- Driver API、车辆绑定、停靠点到店/签收/失败和最多 3 张图片回单；
+- 每日异常工作台及只读异常报告；
 - 关键状态变更和人工调整使用事务。
 
 ### 数据库与测试
 
-- 当前共有 15 个 Alembic migration；
+- 当前共有 18 个 Alembic migration；
 - pytest 使用 SQLite 内存数据库，与开发 MySQL 隔离；
-- 当前全量测试结果：`229 passed, 1 warning`；
+- 当前稳定版候选全量测试结果：`295 passed, 1 warning`；
 - Agent Phase 2 另已在真实 MySQL 上验证重复确认和两个请求并发确认同一个 Pending Action 的边界。
 
 ### 认证与权限
@@ -119,6 +123,7 @@
 - `ADMIN` 可执行全部操作；
 - `DISPATCHER` 可维护每日出勤和配送需求，并执行自动派车、人工调整、发布及配送状态操作；
 - `VIEWER` 只能读取；
+- `DRIVER` 只能访问本人绑定车辆的 Driver 任务；
 - 前端隐藏无权限按钮，后端仍会独立返回 `403 FORBIDDEN`。
 
 ### 审计日志
@@ -134,6 +139,7 @@
 
 - Agent Phase 1 已完成：真实模型普通对话、六个只读 Tool、Tool Schema、Registry、Executor、Tool Loop、持久化 Conversation 多轮会话和 Vue 智能调度助手；
 - Agent Phase 2 第一版已完成：`move_delivery_demand`、`cancel_dispatch_plan` 两个受控写 Tool；
+- Agent Phase 3 已完成：Markdown 知识库、真实 Embedding、Chroma 持久化和 `search_knowledge_base` Tool；
 - 写 Tool 首次调用只创建持久化 `Pending Action`，不会直接修改业务数据；
 - Vue 确认卡展示操作摘要、关键参数、风险、状态及确认/取消入口；
 - Confirm 时重新检查用户、Conversation、过期时间、Action 状态和 RBAC，再调用现有业务 Service；
@@ -147,10 +153,12 @@
 backend/
 ├── alembic/
 │   ├── env.py                         # Alembic 运行环境
-│   └── versions/                      # 15 个数据库迁移版本
+│   └── versions/                      # 18 个数据库迁移版本
 ├── app/
 │   ├── agent/                         # ModelClient、Prompt、Tool Schema/Registry/Executor 与读写 Tool
+│   ├── rag/                           # 文档加载、切分、Embedding、Chroma 与检索服务
 │   ├── api/
+│   │   ├── driver/                    # DRIVER 独立 API 与 ownership 校验
 │   │   ├── dependencies.py            # FastAPI 数据库依赖
 │   │   ├── exception_handlers.py      # 统一业务异常响应
 │   │   └── v1/
@@ -233,6 +241,8 @@ frontend/src/
 | `AuditLog` | 核心业务成功操作的审计记录 |
 | `AgentConversation` / `AgentConversationMessage` | 用户隔离的 Agent 多轮会话和消息 |
 | `AgentPendingAction` | 写 Tool 的用户、会话、参数、风险、过期时间和执行状态 |
+| `CargoCategory` | 货物分类、默认优先级和温控要求 |
+| `DeliveryProof` | 停靠点配送回单图片元数据 |
 
 派车方案关系：
 
@@ -491,6 +501,14 @@ AGENT_TIMEOUT=30
 AGENT_MAX_TOOL_CALLS=5
 AGENT_PENDING_ACTION_EXPIRE_MINUTES=15
 AGENT_HISTORY_MAX_MESSAGES=20
+UPLOAD_ROOT=uploads
+DELIVERY_PROOF_MAX_BYTES=5242880
+RAG_EMBEDDING_PROVIDER=openai-compatible
+RAG_EMBEDDING_MODEL=
+RAG_EMBEDDING_API_KEY=
+RAG_EMBEDDING_BASE_URL=
+RAG_KNOWLEDGE_BASE_DIR=knowledge_base
+RAG_VECTOR_STORE_DIR=rag_data/chroma
 ```
 
 Agent 配置可选；未配置模型时不影响物流业务接口启动，只会让 Agent 调用返回明确的配置错误。真实 `AGENT_API_KEY` 只写入本地 `.env`，不要提交到 Git。
@@ -505,7 +523,7 @@ python -m app.scripts.create_user --username admin --role ADMIN
 uvicorn app.main:app --reload
 ```
 
-创建用户命令会在终端中安全提示输入并确认密码。可用角色为 `ADMIN`、`DISPATCHER`、`VIEWER`。必须先执行 migration，再创建第一个管理员。
+创建用户命令会在终端中安全提示输入并确认密码。可用角色为 `ADMIN`、`DISPATCHER`、`VIEWER`、`DRIVER`。必须先执行 migration，再创建第一个管理员。
 
 默认访问地址：
 
@@ -533,6 +551,9 @@ uvicorn app.main:app --reload
 → 20260928_13_agent_conversations
 → 20260929_14_agent_pending_actions
 → 20260930_15_store_coordinates
+→ 20260930_16_cargo_capabilities
+→ 20261001_17_driver_miniprogram
+→ 20261001_18_delivery_proof
 ```
 
 升级到最新版本：
@@ -572,7 +593,7 @@ python -m pytest tests/test_dispatch_plan_publish_validation.py -q
 测试配置位于 `pyproject.toml`，测试夹具会把 `DATABASE_URL` 切换为 SQLite 内存数据库，不会修改开发 MySQL 数据。当前基线为：
 
 ```text
-229 passed, 1 warning
+295 passed, 1 warning
 ```
 
 ## 14. 当前未完成功能
@@ -592,7 +613,10 @@ python -m pytest tests/test_dispatch_plan_publish_validation.py -q
 - 消息通知、导出和打印；
 - 持续集成中的自动化 MySQL 测试、更大规模并发压力测试和性能优化；
 - 生产监控、日志采集和备份恢复方案；
-- Agent Memory、RAG、MCP、Multi-Agent 和 Streaming（当前阶段均未实现）。
+- 危险品、易碎品独立运输规则；
+- RAG PDF、增量更新和 reranker；
+- Agent Memory、MCP、Multi-Agent 和 Streaming；
+- 微信小程序真机验收。
 
 ## 15. 后续 Roadmap
 
@@ -630,7 +654,7 @@ python -m pytest tests/test_dispatch_plan_publish_validation.py -q
 ### 阶段 E：Agent 后续演进
 
 - 在当前 Human-in-the-loop 和审计边界稳定后，再评估更多写 Tool；
-- 根据真实知识检索需求评估 RAG；
+- 在现有 Markdown + Chroma RAG 基础上评估 PDF、增量更新和 reranker；
 - 根据长期偏好需求评估 Memory；
 - 在单 Agent 职责无法覆盖时再评估 MCP 或 Multi-Agent；
 - 增加流式响应、模型可观测性和更系统的 Agent 评测。

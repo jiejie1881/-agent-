@@ -135,7 +135,20 @@ Docker 使用 `rag_data` named volume 持久化 Chroma。真实密钥不得提�
 ## 12. 当前边界
 
 - 第一版只支持 UTF-8 Markdown 和 TXT，不支持 PDF。
+- 第一版没有 reranker 和增量更新；知识变更后全量重建 collection。
 - 第一版使用单机 Chroma 持久化目录，不提供分布式向量服务。
 - Embedding 接口要求兼容 OpenAI `/embeddings` 协议。
 - 知识更新后需要显式重新运行构建命令。
 - 向量库只保存非结构化知识，不保存实时配送状态。
+
+## 13. 稳定版验证记录
+
+- Real Embedding：PASS；
+- 知识文档：4；
+- Chunks：19；
+- Chroma 持久化及 Backend 容器重启后读取：PASS；
+- Retriever、纯 RAG、纯业务 Tool、混合 Tool：PASS；
+- Pending Action / HITL 回归：PASS；
+- Vue Agent 页面端到端：PASS。
+
+该记录表示既有真实环境验证已经完成；外部模型或 Embedding 配额不足时不伪造在线回答。
