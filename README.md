@@ -149,7 +149,7 @@ RAG: 4 documents / 19 chunks, persistence PASS
 - 危险品和易碎品尚无独立运输规则；
 - RAG 只读取 Markdown，暂不支持 PDF、reranker 和增量更新，向量库为单机 Chroma；
 - 回单使用本地 Docker Volume，暂无云 OSS 生命周期管理；
-- Driver 后端已完成，微信小程序真机验收仍未完成，不能标记为通过；
+- 微信司机端代码能力及 Driver API 集成已完成；生产发布因平台认证与上线流程暂缓，开发者工具/真机验收不纳入且不阻塞当前 Stable Demo；
 - Agent 在线能力依赖外部模型/Embedding 服务和配额，普通物流业务不依赖模型。
 
 后续增强项统一记录在 [docs/FUTURE_IMPROVEMENTS.md](docs/FUTURE_IMPROVEMENTS.md)。

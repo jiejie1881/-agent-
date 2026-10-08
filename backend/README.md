@@ -616,7 +616,7 @@ python -m pytest tests/test_dispatch_plan_publish_validation.py -q
 - 危险品、易碎品独立运输规则；
 - RAG PDF、增量更新和 reranker；
 - Agent Memory、MCP、Multi-Agent 和 Streaming；
-- 微信小程序真机验收。
+- 微信司机端代码能力已实现，生产发布因平台认证与上线流程暂缓；开发者工具/真机验收不属于当前 Stable Demo 验收范围。
 
 ## 15. 后续 Roadmap
 

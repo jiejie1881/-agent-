@@ -8,5 +8,5 @@
 - 回单对象存储、访问鉴权和生命周期管理；
 - RAG PDF、增量更新、reranker 和知识库管理后台；
 - Agent Memory、MCP、Multi-Agent、Streaming 与系统化评测；
-- 微信小程序开发者工具与真机验收；
+- 微信小程序平台认证、开发者工具/真机验收与正式发布；该项不属于当前 Stable Demo 验收范围；
 - CI/CD、生产监控、备份恢复和压力测试。

@@ -68,7 +68,7 @@
 - 停靠点 `PENDING / ARRIVED / SIGNED / FAILED`：PASS；
 - 图片类型、大小、UUID 文件名、最多 3 张和 Docker Volume：PASS；
 - 未完成停靠点时禁止完成整趟：PASS；
-- 微信开发者工具与真机验收：未完成。
+- 微信司机端代码实现及后端接口集成：已完成；生产发布因平台认证与上线流程暂缓，开发者工具/真机验收为 `NOT INCLUDED IN CURRENT RELEASE ACCEPTANCE`，不阻塞当前 Stable Demo。
 
 ## Daily Exception
 
@@ -127,7 +127,7 @@
 - 危险品、易碎品独立运输规则未实现；
 - RAG 不支持 PDF、增量更新和 reranker，使用单机 Chroma；
 - 回单仍使用本地 Docker Volume，未接入 OSS；
-- 微信小程序开发者工具与真机验收未完成；
+- 微信小程序生产发布暂缓，开发者工具/真机验收不属于当前 Stable Demo 发布范围；
 - 外部模型和 Embedding 受网络与配额影响，普通物流业务不依赖模型。
 
 ## Release verdict
