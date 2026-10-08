@@ -41,6 +41,17 @@ services:
       AGENT_HISTORY_MAX_MESSAGES: ${AGENT_HISTORY_MAX_MESSAGES:-20}
       UPLOAD_ROOT: ${UPLOAD_ROOT:-/app/uploads}
       DELIVERY_PROOF_MAX_BYTES: ${DELIVERY_PROOF_MAX_BYTES:-5242880}
+      RAG_EMBEDDING_PROVIDER: ${RAG_EMBEDDING_PROVIDER:-}
+      RAG_EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-}
+      RAG_EMBEDDING_API_KEY: ${RAG_EMBEDDING_API_KEY:-}
+      RAG_EMBEDDING_BASE_URL: ${RAG_EMBEDDING_BASE_URL:-}
+      RAG_EMBEDDING_TIMEOUT: ${RAG_EMBEDDING_TIMEOUT:-30}
+      RAG_KNOWLEDGE_BASE_DIR: ${RAG_KNOWLEDGE_BASE_DIR:-/app/knowledge_base}
+      RAG_VECTOR_STORE_DIR: ${RAG_VECTOR_STORE_DIR:-/app/rag_data/chroma}
+      RAG_COLLECTION_NAME: ${RAG_COLLECTION_NAME:-logistics_knowledge}
+      RAG_CHUNK_SIZE: ${RAG_CHUNK_SIZE:-800}
+      RAG_CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-120}
+      RAG_DEFAULT_TOP_K: ${RAG_DEFAULT_TOP_K:-4}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -48,6 +59,7 @@ services:
         condition: service_healthy
     volumes:
       - delivery_proofs:/app/uploads
+      - rag_data:/app/rag_data
     healthcheck:
       test:
         - CMD
@@ -80,3 +92,4 @@ services:
 volumes:
   mysql_data:
   delivery_proofs:
+  rag_data:

@@ -5,6 +5,7 @@ from app.agent.schemas.tool import (
     LIST_DELIVERY_DEMANDS_DEFINITION,
     LIST_DISPATCH_PLANS_DEFINITION,
     VALIDATE_DISPATCH_PLAN_DEFINITION,
+    SEARCH_KNOWLEDGE_BASE_DEFINITION,
     AgentToolDefinition,
     GetDispatchPlanDetailArgs,
     GetUnassignedDemandsArgs,
@@ -12,6 +13,7 @@ from app.agent.schemas.tool import (
     ListDeliveryDemandsArgs,
     ListDispatchPlansArgs,
     ValidateDispatchPlanArgs,
+    SearchKnowledgeBaseArgs,
 )
 
 __all__ = [
@@ -22,10 +24,12 @@ __all__ = [
     "ListDeliveryDemandsArgs",
     "ListDispatchPlansArgs",
     "ValidateDispatchPlanArgs",
+    "SearchKnowledgeBaseArgs",
     "GET_DISPATCH_PLAN_DETAIL_DEFINITION",
     "GET_UNASSIGNED_DEMANDS_DEFINITION",
     "GET_VEHICLE_ATTENDANCE_DEFINITION",
     "LIST_DELIVERY_DEMANDS_DEFINITION",
     "LIST_DISPATCH_PLANS_DEFINITION",
     "VALIDATE_DISPATCH_PLAN_DEFINITION",
+    "SEARCH_KNOWLEDGE_BASE_DEFINITION",
 ]

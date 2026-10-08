@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,23 @@ class Settings(BaseSettings):
     agent_pending_action_expire_minutes: int = Field(default=15, ge=1, le=60)
     upload_root: str = "uploads"
     delivery_proof_max_bytes: int = Field(default=5 * 1024 * 1024, ge=1024)
+    rag_embedding_provider: str | None = None
+    rag_embedding_model: str | None = None
+    rag_embedding_api_key: SecretStr | None = None
+    rag_embedding_base_url: str | None = None
+    rag_embedding_timeout: float = Field(default=30.0, gt=0)
+    rag_knowledge_base_dir: str = "knowledge_base"
+    rag_vector_store_dir: str = "rag_data/chroma"
+    rag_collection_name: str = "logistics_knowledge"
+    rag_chunk_size: int = Field(default=800, ge=200, le=4000)
+    rag_chunk_overlap: int = Field(default=120, ge=0, le=1000)
+    rag_default_top_k: int = Field(default=4, ge=1, le=10)
+
+    @model_validator(mode="after")
+    def validate_rag_chunking(self):
+        if self.rag_chunk_overlap >= self.rag_chunk_size:
+            raise ValueError("RAG_CHUNK_OVERLAP must be smaller than RAG_CHUNK_SIZE")
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

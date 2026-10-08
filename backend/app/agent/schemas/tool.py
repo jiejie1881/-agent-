@@ -73,6 +73,26 @@ class CancelDispatchPlanArgs(PlanIdToolArgs):
     pass
 
 
+class SearchKnowledgeBaseArgs(StrictToolArgs):
+    query: str = Field(
+        min_length=1,
+        max_length=500,
+        description="需要查询的物流业务规则、运输规范或操作说明",
+    )
+    top_k: int | None = Field(
+        default=None,
+        ge=1,
+        le=10,
+        description="可选的最相关知识片段数；未传时使用服务端配置",
+    )
+    document_type: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=50,
+        description="可选文档类型过滤，例如 cold_chain 或 dispatch_rule",
+    )
+
+
 class AgentToolDefinition(BaseModel):
     """Description and generated parameters for one model-visible function."""
 
@@ -203,4 +223,14 @@ CANCEL_DISPATCH_PLAN_DEFINITION = AgentToolDefinition(
     read_only=False,
     requires_confirmation=True,
     required_permission=Permission.DISPATCH_WRITE,
+)
+
+SEARCH_KNOWLEDGE_BASE_DEFINITION = AgentToolDefinition(
+    name="search_knowledge_base",
+    description=(
+        "查询企业物流知识库，适用于派车规则、冷链要求、货物运输要求、"
+        "异常处理和系统操作说明。返回可核验的文档来源和章节。"
+        "不得用于查询当日配送需求、车辆出勤、派车方案等实时数据。"
+    ),
+    arguments_schema=SearchKnowledgeBaseArgs,
 )

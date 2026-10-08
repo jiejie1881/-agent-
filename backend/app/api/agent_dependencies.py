@@ -4,6 +4,7 @@ from fastapi import Depends
 
 from app.agent.agent_service import AgentService
 from app.agent.model_client import OpenAICompatibleModelClient
+from app.agent.knowledge_tools import SearchKnowledgeBaseTool
 from app.agent.read_only_tools import build_read_only_tool_executors
 from app.agent.tool_execution import AgentToolExecutorRegistry
 from app.agent.write_tools import build_write_tool_executors
@@ -15,6 +16,7 @@ from app.services.delivery_demand_service import DeliveryDemandService
 from app.services.dispatch_plan_service import DispatchPlanService
 from app.services.vehicle_attendance_service import VehicleAttendanceService
 from app.services.agent_pending_action_service import AgentPendingActionService
+from app.rag.factory import build_rag_service
 
 
 def get_agent_service(db: DbSession) -> AgentService:
@@ -28,6 +30,7 @@ def get_agent_service(db: DbSession) -> AgentService:
                 dispatch_plan_service=dispatch_plan_service,
             ),
             *build_write_tool_executors(dispatch_plan_service),
+            SearchKnowledgeBaseTool(build_rag_service()),
         ],
         definition_registry=tool_registry,
     )

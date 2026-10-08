@@ -23,6 +23,7 @@ EXPECTED_TOOL_NAMES = [
     "get_dispatch_plan_detail",
     "get_unassigned_demands",
     "validate_dispatch_plan",
+    "search_knowledge_base",
     "move_delivery_demand",
     "cancel_dispatch_plan",
 ]
@@ -116,7 +117,7 @@ def test_openai_tools_preserve_registry_order_and_schema() -> None:
 
     tools = registry.to_openai_tools()
 
-    assert len(tools) == 8
+    assert len(tools) == 9
     assert [tool["function"]["name"] for tool in tools] == EXPECTED_TOOL_NAMES
     assert all(tool["type"] == "function" for tool in tools)
     assert all(tool["function"]["parameters"]["type"] == "object" for tool in tools)

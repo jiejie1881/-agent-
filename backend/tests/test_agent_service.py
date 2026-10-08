@@ -137,7 +137,88 @@ def test_direct_answer_calls_model_once_and_does_not_execute_tool(
     ]
     assert "未经用户在界面点击确认绝不会执行" in messages[0].content
     assert messages[1].content == "你好"
-    assert len(tools) == 8
+    assert len(tools) == 9
+
+
+def test_rag_question_uses_knowledge_tool(tool_context) -> None:
+    service, _, executor = build_service(
+        [
+            AgentModelResponse(
+                tool_calls=(
+                    tool_call(
+                        "call_rag",
+                        "search_knowledge_base",
+                        {"query": "冷冻货物需要什么运输能力？"},
+                    ),
+                )
+            ),
+            AgentModelResponse(content="冷冻货物需要匹配的冷链能力。"),
+        ],
+        executor=FakeExecutorRegistry(
+            {
+                "search_knowledge_base": {
+                    "results": [{"source": "cold_chain_rules.md"}]
+                }
+            }
+        ),
+    )
+
+    result = run_chat(service, tool_context, "冷冻货物需要什么运输能力？")
+
+    assert result.used_tools == ("search_knowledge_base",)
+    assert executor.calls[0][0] == "search_knowledge_base"
+
+
+def test_real_time_question_uses_business_tool_without_rag(tool_context) -> None:
+    service, _, executor = build_service(
+        [
+            AgentModelResponse(
+                tool_calls=(
+                    tool_call(
+                        "call_demands",
+                        "list_delivery_demands",
+                        {"date": "2026-10-08"},
+                    ),
+                )
+            ),
+            AgentModelResponse(content="已查询当日需求。"),
+        ]
+    )
+
+    result = run_chat(service, tool_context, "今天有哪些未分配需求？")
+
+    assert result.used_tools == ("list_delivery_demands",)
+    assert all(call[0] != "search_knowledge_base" for call in executor.calls)
+
+
+def test_mixed_question_allows_business_and_rag_tools(tool_context) -> None:
+    service, _, executor = build_service(
+        [
+            AgentModelResponse(
+                tool_calls=(
+                    tool_call(
+                        "call_detail",
+                        "get_dispatch_plan_detail",
+                        {"plan_id": 12},
+                    ),
+                    tool_call(
+                        "call_rag",
+                        "search_knowledge_base",
+                        {"query": "冷冻需求与车辆能力的匹配规则"},
+                    ),
+                )
+            ),
+            AgentModelResponse(content="实时数据与知识库规则显示温控能力不匹配。"),
+        ]
+    )
+
+    result = run_chat(service, tool_context, "为什么这个冷冻需求不能分给当前车辆？")
+
+    assert result.used_tools == (
+        "get_dispatch_plan_detail",
+        "search_knowledge_base",
+    )
+    assert [call[0] for call in executor.calls] == list(result.used_tools)
 
 
 def test_single_tool_call_preserves_assistant_message_and_call_id(
