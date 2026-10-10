@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from app.agent.agent_service import AgentService
-from app.agent.model_client import OpenAICompatibleModelClient
+from app.agent.langchain_client import LangChainModelClient
 from app.agent.knowledge_tools import SearchKnowledgeBaseTool
 from app.agent.read_only_tools import build_read_only_tool_executors
 from app.agent.tool_execution import AgentToolExecutorRegistry
@@ -40,7 +40,7 @@ def get_agent_service(db: DbSession) -> AgentService:
         get_settings().agent_pending_action_expire_minutes,
     )
     return AgentService(
-        model_client=OpenAICompatibleModelClient(),
+        model_client=LangChainModelClient(),
         tool_registry=tool_registry,
         executor_registry=executor_registry,
         pending_action_service=pending_action_service,

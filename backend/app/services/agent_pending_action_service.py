@@ -98,6 +98,9 @@ class AgentPendingActionService:
             raise PermissionDeniedError("当前用户已没有执行该Agent写操作的权限")
 
         try:
+            if not self.repository.claim_pending(action_id, current_user.id, conversation_id,
+                                                 AgentPendingActionStatus.CONFIRMED):
+                raise AgentPendingActionError("AGENT_ACTION_NOT_PENDING", "待确认操作已被其他请求处理")
             action.status = AgentPendingActionStatus.CONFIRMED
             action.confirmed_at = datetime.now(timezone.utc)
             self.session.flush()
@@ -135,6 +138,10 @@ class AgentPendingActionService:
             self.session.commit()
             raise AgentPendingActionError("AGENT_ACTION_EXPIRED", "待确认操作已过期")
         self._require_pending(action)
+        if not self.repository.claim_pending(action_id, current_user.id, conversation_id,
+                                             AgentPendingActionStatus.CANCELLED):
+            self.session.rollback()
+            raise AgentPendingActionError("AGENT_ACTION_NOT_PENDING", "待确认操作已被其他请求处理")
         action.status = AgentPendingActionStatus.CANCELLED
         self.session.commit()
         self.session.refresh(action)

@@ -25,6 +25,8 @@ htmlcov/
 .ruff_cache/
 .cache/
 backend/rag_data/
+backend/agent_data/
+/agent_data/
 *.log
 backend/uploads/*
 !backend/uploads/.gitkeep

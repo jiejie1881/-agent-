@@ -186,7 +186,12 @@ async def confirm_agent_pending_action(
     action_id: int,
     current_user: CurrentUser,
     pending_action_service: AgentPendingActionServiceDependency,
+    agent_service: AgentServiceDependency,
 ) -> AgentPendingActionExecutionResponse:
+    resumed = await agent_service.resume_action(conversation_id, action_id, current_user, 'confirm')
+    if resumed is not None:
+        action = pending_action_service._get_owned(action_id, conversation_id, current_user.id, for_update=False)
+        return AgentPendingActionExecutionResponse(action=pending_action_service.snapshot(action), result=resumed)
     action, result = await pending_action_service.confirm(
         conversation_id, action_id, current_user
     )
@@ -201,12 +206,17 @@ async def confirm_agent_pending_action(
     response_model=AgentPendingActionExecutionResponse,
     summary="取消Agent待确认操作",
 )
-def cancel_agent_pending_action(
+async def cancel_agent_pending_action(
     conversation_id: int,
     action_id: int,
     current_user: CurrentUser,
     pending_action_service: AgentPendingActionServiceDependency,
+    agent_service: AgentServiceDependency,
 ) -> AgentPendingActionExecutionResponse:
+    resumed = await agent_service.resume_action(conversation_id, action_id, current_user, 'cancel')
+    if resumed is not None:
+        action = pending_action_service._get_owned(action_id, conversation_id, current_user.id, for_update=False)
+        return AgentPendingActionExecutionResponse(action=pending_action_service.snapshot(action), result=resumed)
     action = pending_action_service.cancel(conversation_id, action_id, current_user)
     return AgentPendingActionExecutionResponse(
         action=pending_action_service.snapshot(action),

@@ -19,6 +19,10 @@ dependencies = [
     "httpx>=0.28,<1.0",
     "python-multipart>=0.0.20,<1.0",
     "chromadb>=1.0,<2.0",
+    "langchain==1.4.4",
+    "langchain-openai==1.7.0",
+    "langgraph==1.2.14",
+    "langgraph-checkpoint-sqlite==3.1.1",
 ]
 
 [project.optional-dependencies]

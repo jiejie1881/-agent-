@@ -3,6 +3,9 @@
 __pycache__
 *.py[cod]
 .pytest_cache
+agent_data/
+rag_data/
+uploads/
 tests
 *.db
 *.sqlite
