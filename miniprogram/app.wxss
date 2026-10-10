@@ -1,0 +1,11 @@
+page { background: #f4f7fb; color: #172b4d; font-size: 28rpx; }
+.page { min-height: 100vh; padding: 28rpx; box-sizing: border-box; }
+.card { margin-bottom: 24rpx; padding: 28rpx; border-radius: 20rpx; background: #fff; box-shadow: 0 8rpx 28rpx rgba(23, 43, 77, .06); }
+.title { font-size: 38rpx; font-weight: 700; }
+.subtle { color: #7b8794; font-size: 24rpx; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; }
+.primary-button { background: #1769e0 !important; color: #fff !important; }
+.danger-button { background: #e5484d !important; color: #fff !important; }
+.status { display: inline-block; padding: 6rpx 14rpx; border-radius: 999rpx; background: #e9f2ff; color: #1769e0; font-size: 22rpx; }
+.empty { padding: 120rpx 20rpx; text-align: center; color: #8993a4; }
+.error { margin-bottom: 20rpx; padding: 18rpx; border-radius: 12rpx; background: #fff1f0; color: #c53b3e; }

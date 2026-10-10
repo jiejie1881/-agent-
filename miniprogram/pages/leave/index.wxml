@@ -1,0 +1,17 @@
+<view class="page">
+  <view class="card">
+    <view class="title">请假申请</view>
+    <view class="notice">申请需管理员审批；提交后影响班次将暂缓新分配。</view>
+    <picker mode="date" value="{{start_date}}" data-field="start_date" bindchange="change"><view class="field">开始日期：{{start_date || '请选择'}}</view></picker>
+    <picker mode="date" value="{{end_date}}" data-field="end_date" bindchange="change"><view class="field">结束日期：{{end_date || '请选择'}}</view></picker>
+    <picker range="{{periodLabels}}" value="{{periodIndex}}" data-field="periodIndex" bindchange="change"><view class="field">请假时段：{{periodLabels[periodIndex]}}</view></picker>
+    <input class="field" placeholder="请假类型（如事假）" maxlength="50" value="{{leave_type}}" data-field="leave_type" bindinput="change" />
+    <textarea class="reason" placeholder="请假原因（必填）" maxlength="500" value="{{reason}}" data-field="reason" bindinput="change" />
+    <button class="primary-button" loading="{{saving}}" disabled="{{saving}}" bindtap="submit">提交审批</button>
+  </view>
+  <view wx:if="{{error}}" class="card"><view class="error">{{error}}</view><button bindtap="load">重新加载记录</button></view>
+  <view class="card"><view class="title">我的请假记录</view>
+    <view wx:if="{{loading}}">正在加载…</view><view wx:elif="{{!records.length}}" class="notice">暂无请假记录</view>
+    <view wx:for="{{records}}" wx:key="id" class="record"><view>{{item.start_date}} ～ {{item.end_date}} · {{item.periodLabel}}</view><view class="status">{{item.statusLabel}}</view><view>{{item.leave_type}}：{{item.reason}}</view><view wx:if="{{item.review_remark}}">审核备注：{{item.review_remark}}</view><view class="notice">申请时间：{{item.created_at}}</view><button wx:if="{{item.status === 'PENDING'}}" disabled="{{saving}}" data-id="{{item.id}}" bindtap="withdraw">撤回申请</button></view>
+  </view>
+</view>

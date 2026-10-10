@@ -24,6 +24,12 @@ const children: RouteRecordRaw[] = [
   { path: 'operations/substitutions', component: () => import('@/views/drivers/DriverLeaveView.vue'), props: { mode: 'substitution' }, meta: { title: '代班调度', group: '每日运营' } },
   { path: 'operations/drivers', name: 'driver-scheduling', component: () => import('@/views/drivers/DriverSchedulingView.vue'), meta: { title: '司机与排班', group: '每日运营' } },
   {
+    path: 'dashboard',
+    name: 'dashboard',
+    component: () => import('@/views/dashboard/DashboardView.vue'),
+    meta: { title: '运营总览', group: '运营中心' },
+  },
+  {
     path: 'master/terrains',
     name: 'terrains',
     component: TerrainListView,
@@ -121,12 +127,12 @@ const router = createRouter({
     {
       path: '/',
       component: AdminLayout,
-      redirect: '/master/terrains',
+      redirect: '/dashboard',
       children,
     },
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/master/terrains',
+      redirect: '/dashboard',
     },
   ],
   scrollBehavior: () => ({ top: 0 }),

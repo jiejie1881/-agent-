@@ -1,0 +1,2 @@
+.hero { display: flex; justify-content: space-between; align-items: center; margin: -28rpx -28rpx 34rpx; padding: 48rpx 34rpx; color: #fff; background: linear-gradient(135deg,#1769e0,#4b94f5); }
+.greeting { font-size: 38rpx; font-weight: 700; }.vehicle { margin-top: 12rpx; opacity: .85; }.count { font-size: 54rpx; font-weight: 700; }.count text { font-size: 24rpx; }.section-title { margin-bottom: 20rpx; font-size: 32rpx; font-weight: 700; }.route { font-size: 31rpx; font-weight: 650; }.meta,.load { margin-top: 16rpx; color: #67768a; }.load { color: #1769e0; }

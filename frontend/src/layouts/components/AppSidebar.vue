@@ -2,6 +2,7 @@
 import {
   Calendar,
   Connection,
+  DataAnalysis,
   Guide,
   MapLocation,
   OfficeBuilding,
@@ -51,6 +52,7 @@ const activeMenu = computed(() => {
         :collapse-transition="false"
         class="sidebar-menu"
       >
+        <el-menu-item index="/dashboard"><el-icon><DataAnalysis /></el-icon><span>运营总览</span></el-menu-item>
         <el-sub-menu index="master">
           <template #title><el-icon><SetUp /></el-icon><span>基础资料</span></template>
           <el-menu-item index="/master/terrains"><el-icon><MapLocation /></el-icon><span>地形管理</span></el-menu-item>
@@ -70,8 +72,10 @@ const activeMenu = computed(() => {
         </el-sub-menu>
 
         <el-sub-menu index="dispatch">
+          <template #title><el-icon><DataAnalysis /></el-icon><span>派车中心</span></template>
           <el-menu-item index="/dispatch/auto"><el-icon><Van /></el-icon><span>自动派车</span></el-menu-item>
           <el-menu-item index="/dispatch/plans"><el-icon><Tickets /></el-icon><span>方案列表</span></el-menu-item>
+          <el-menu-item index="/dispatch/quality"><el-icon><DataAnalysis /></el-icon><span>调度质量报告</span></el-menu-item>
           <el-menu-item index="/dispatch/exceptions"><el-icon><DocumentChecked /></el-icon><span>每日异常</span></el-menu-item>
         </el-sub-menu>
 
