@@ -1,5 +1,5 @@
 import type { DeliveryDemandStatus, DeliveryPeriod } from '@/types/delivery-demand'
-interface DeliveryProof { id: number; url: string }
+import type { DeliveryProof } from '@/types/delivery-proof'
 
 export type DispatchPlanStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
 

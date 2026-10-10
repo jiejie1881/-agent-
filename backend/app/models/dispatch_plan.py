@@ -14,6 +14,7 @@ from sqlalchemy import (
     Text,
     DateTime,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,6 +22,7 @@ from app.domain.enums import (
     DeliveryFailureReason,
     DeliveryPeriod,
     DeliveryStopStatus,
+    DeliveryProofReviewStatus,
     DispatchPlanStatus,
 )
 from app.infrastructure.database.base import Base
@@ -177,6 +179,7 @@ class DispatchOrderDetail(Base):
 
 class DeliveryProof(TimestampMixin, Base):
     __tablename__ = "delivery_proofs"
+    __table_args__ = (UniqueConstraint("replaces_proof_id", name="uq_delivery_proof_replaces"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     dispatch_order_detail_id: Mapped[int] = mapped_column(
@@ -186,8 +189,37 @@ class DeliveryProof(TimestampMixin, Base):
     url: Mapped[str] = mapped_column(String(500), nullable=False)
     content_type: Mapped[str] = mapped_column(String(100), nullable=False)
     size_bytes: Mapped[int] = mapped_column(nullable=False)
+    review_status: Mapped[DeliveryProofReviewStatus] = mapped_column(
+        Enum(DeliveryProofReviewStatus, native_enum=False, create_constraint=True,
+             validate_strings=True, name="delivery_proof_review_status"),
+        nullable=False, default=DeliveryProofReviewStatus.PENDING, server_default="PENDING",
+    )
+    # A replacement is a new immutable file; never overwrite the rejected evidence.
+    replaces_proof_id: Mapped[int | None] = mapped_column(
+        ForeignKey("delivery_proofs.id", ondelete="RESTRICT", name="fk_delivery_proof_replaces"), nullable=True,
+    )
 
     stop: Mapped[DispatchOrderDetail] = relationship(back_populates="proofs")
+    reviews: Mapped[list["DeliveryProofReview"]] = relationship(
+        back_populates="proof", order_by="DeliveryProofReview.id",
+    )
+
+
+class DeliveryProofReview(Base):
+    __tablename__ = "delivery_proof_reviews"
+    __table_args__ = (UniqueConstraint("proof_id", name="uq_delivery_proof_review_once"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    proof_id: Mapped[int] = mapped_column(ForeignKey("delivery_proofs.id", ondelete="RESTRICT"), index=True)
+    reviewer_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    reviewer_username: Mapped[str] = mapped_column(String(100))
+    decision: Mapped[DeliveryProofReviewStatus] = mapped_column(
+        Enum(DeliveryProofReviewStatus, native_enum=False, create_constraint=True,
+             validate_strings=True, name="delivery_proof_review_decision"),
+    )
+    reason: Mapped[str | None] = mapped_column(String(1000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    proof: Mapped[DeliveryProof] = relationship(back_populates="reviews")
 
 
 class DispatchPlanUnassignedDemand(Base):

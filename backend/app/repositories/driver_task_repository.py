@@ -81,6 +81,6 @@ class DriverTaskRepository:
                 .joinedload(DeliveryDemand.cargo_category),
                 selectinload(DispatchOrder.details).selectinload(
                     DispatchOrderDetail.proofs
-                ),
+                ).selectinload(DeliveryProof.reviews),
             )
         )

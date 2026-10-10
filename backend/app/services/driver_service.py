@@ -147,9 +147,10 @@ class DriverService:
         content_type: str,
         content: bytes,
         current_user: User,
+        replaces_proof_id: int | None = None,
     ) -> DeliveryProofResponse:
         proof = self.stop_service.upload_proof(
-            task_id, stop_id, content_type, content, current_user
+            task_id, stop_id, content_type, content, current_user, replaces_proof_id
         )
         return DeliveryProofResponse.model_validate(proof, from_attributes=True)
 

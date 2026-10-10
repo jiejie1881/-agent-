@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 
 from app.api.auth_dependencies import DriverUser, require_driver
 from app.api.dependencies import DbSession
@@ -153,6 +153,7 @@ async def upload_driver_stop_proof(
     current_user: DriverUser,
     db: DbSession,
     file: UploadFile = File(...),
+    replaces_proof_id: int | None = Form(default=None, gt=0),
 ):
     max_bytes = get_settings().delivery_proof_max_bytes
     content = await file.read(max_bytes + 1)
@@ -162,6 +163,7 @@ async def upload_driver_stop_proof(
         file.content_type or "",
         content,
         current_user,
+        replaces_proof_id,
     )
 
 

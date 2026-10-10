@@ -38,6 +38,7 @@ import { dimensionLabels } from '@/views/dispatch/qualityHelpers'
 import { businessRef, planRef, typeLabel } from '@/utils/businessLabels'
 import { useAuthStore } from '@/stores/auth'
 import DispatchRouteMap from '@/views/dispatch/components/DispatchRouteMap.vue'
+import DeliveryReceiptPanel from '@/views/dispatch/components/DeliveryReceiptPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -544,6 +545,7 @@ onMounted(loadPlan)
               <template #default="{ row }"><strong>{{ formatQuantity(row.quantity) }}</strong></template>
             </el-table-column>
           </el-table>
+          <DeliveryReceiptPanel :stops="order.details" />
         </el-card>
       </div>
       <el-empty v-else description="该方案没有车辆任务" />

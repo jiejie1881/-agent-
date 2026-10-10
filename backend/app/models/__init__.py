@@ -4,6 +4,7 @@ from app.models.dispatch_plan import (
     DispatchOrder,
     DispatchOrderDetail,
     DeliveryProof,
+    DeliveryProofReview,
     DispatchPlan,
     DispatchPlanUnassignedDemand,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "DispatchOrder",
     "DispatchOrderDetail",
     "DeliveryProof",
+    "DeliveryProofReview",
     "DispatchPlanUnassignedDemand",
     "User",
     "AuditLog",

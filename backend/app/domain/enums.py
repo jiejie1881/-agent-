@@ -54,6 +54,12 @@ class DeliveryStopStatus(str, Enum):
     FAILED = "FAILED"
 
 
+class DeliveryProofReviewStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 class DeliveryFailureReason(str, Enum):
     STORE_CLOSED = "STORE_CLOSED"
     REJECTED = "REJECTED"

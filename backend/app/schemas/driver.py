@@ -8,6 +8,7 @@ from app.domain.enums import (
     DeliveryPeriod,
     DeliveryPriority,
     DeliveryStopStatus,
+    DeliveryProofReviewStatus,
     DriverTaskStatus,
 )
 
@@ -77,12 +78,37 @@ class DriverTaskStopResponse(BaseModel):
     proofs: list["DeliveryProofResponse"]
 
 
+class DeliveryProofReviewResponse(BaseModel):
+    id: int
+    reviewer_username: str
+    decision: DeliveryProofReviewStatus
+    reason: str | None
+    created_at: datetime
+
+
+class DeliveryProofReviewRequest(BaseModel):
+    decision: DeliveryProofReviewStatus
+    reason: str | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def check_decision(self):
+        self.reason = self.reason.strip() if self.reason else None
+        if self.decision == DeliveryProofReviewStatus.PENDING:
+            raise ValueError("审核结果只能为通过或驳回")
+        if self.decision == DeliveryProofReviewStatus.REJECTED and not self.reason:
+            raise ValueError("驳回回单必须填写原因")
+        return self
+
+
 class DeliveryProofResponse(BaseModel):
     id: int
     url: str
     content_type: str
     size_bytes: int
     created_at: datetime
+    review_status: DeliveryProofReviewStatus
+    replaces_proof_id: int | None
+    reviews: list[DeliveryProofReviewResponse]
 
 
 class DeliveryStopSignRequest(BaseModel):

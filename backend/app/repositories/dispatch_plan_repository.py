@@ -164,7 +164,7 @@ class DispatchPlanRepository:
     def _detail_statement():
         return select(DispatchPlan).options(
             selectinload(DispatchPlan.orders).selectinload(DispatchOrder.details)
-            .selectinload(DispatchOrderDetail.proofs),
+            .selectinload(DispatchOrderDetail.proofs).selectinload(DeliveryProof.reviews),
             selectinload(DispatchPlan.orders)
             .joinedload(DispatchOrder.vehicle)
             .joinedload(Vehicle.vehicle_type),

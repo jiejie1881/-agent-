@@ -2,8 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -11,11 +10,13 @@ from app.core.storage import delivery_proof_directory
 from app.domain.enums import (
     DeliveryDemandStatus,
     DeliveryStopStatus,
+    DeliveryProofReviewStatus,
 )
 from app.domain.exceptions import BusinessError, ConflictError, NotFoundError
 from app.models.dispatch_plan import DeliveryProof, DispatchOrder, DispatchOrderDetail
 from app.models.user import User
 from app.repositories.driver_task_repository import DriverTaskRepository
+from app.repositories.delivery_proof_repository import DeliveryProofRepository
 from app.schemas.driver import DeliveryStopFailRequest, DeliveryStopSignRequest
 from app.services.audit_log_service import AuditAction, AuditLogService
 
@@ -130,17 +131,30 @@ class DeliveryStopService:
         content_type: str,
         content: bytes,
         actor: User,
+        replaces_proof_id: int | None = None,
     ) -> DeliveryProof:
         order, stop = self.get_owned_stop(task_id, stop_id, actor.id)
-        self._require_task_delivering(order)
+        repository = DeliveryProofRepository(self.session)
+        repository.lock_stop(stop.id)
+        proofs = repository.list_for_stop(stop.id)
+        replaced_ids = {proof.replaces_proof_id for proof in proofs if proof.replaces_proof_id}
+        if replaces_proof_id is not None:
+            previous = next((proof for proof in proofs if proof.id == replaces_proof_id), None)
+            if previous is None:
+                raise NotFoundError("待补传回单不属于此门店")
+            if previous.review_status != DeliveryProofReviewStatus.REJECTED or previous.id in replaced_ids:
+                raise ConflictError("只能补传尚未被替代的驳回回单")
+            if stop.delivery_status != DeliveryStopStatus.SIGNED or any(
+                detail.delivery_demand.status not in {DeliveryDemandStatus.DELIVERING, DeliveryDemandStatus.COMPLETED}
+                for detail in order.details
+            ):
+                raise ConflictError("当前任务不允许补传回单")
+        else:
+            self._require_task_delivering(order)
         if stop.delivery_status == DeliveryStopStatus.PENDING:
             raise ConflictError("司机到店后才能上传配送回单")
-        proof_count = self.session.scalar(
-            select(func.count(DeliveryProof.id)).where(
-                DeliveryProof.dispatch_order_detail_id == stop.id
-            )
-        ) or 0
-        if proof_count >= 3:
+        proof_count = sum(proof.id not in replaced_ids for proof in proofs)
+        if replaces_proof_id is None and proof_count >= 3:
             raise ConflictError("每个门店最多上传3张配送回单")
 
         normalized_type = content_type.lower().split(";", 1)[0].strip()
@@ -164,6 +178,7 @@ class DeliveryStopService:
                 url=f"/uploads/{relative_path.as_posix()}",
                 content_type=normalized_type,
                 size_bytes=len(content),
+                replaces_proof_id=replaces_proof_id,
             )
             self.session.add(proof)
             self.session.flush()
@@ -178,6 +193,7 @@ class DeliveryStopService:
                     "proof_id": proof.id,
                     "content_type": normalized_type,
                     "size_bytes": len(content),
+                    "replaces_proof_id": replaces_proof_id,
                 },
             )
             self.session.commit()
@@ -188,7 +204,7 @@ class DeliveryStopService:
             if written:
                 destination.unlink(missing_ok=True)
             raise
-        except (IntegrityError, OSError) as exc:
+        except (SQLAlchemyError, OSError) as exc:
             self.session.rollback()
             if written:
                 destination.unlink(missing_ok=True)

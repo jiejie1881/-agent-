@@ -22,6 +22,7 @@ from app.api.v1.endpoints import (
     driver_leave,
     ai_operations,
     enterprise,
+    delivery_proofs,
 )
 
 api_router = APIRouter(dependencies=[Depends(enforce_rbac)])
@@ -44,3 +45,4 @@ api_router.include_router(driver_scheduling.router)
 api_router.include_router(driver_leave.router)
 api_router.include_router(users.router)
 api_router.include_router(audit_logs.router)
+api_router.include_router(delivery_proofs.router)
