@@ -18,6 +18,8 @@ from app.models.route import Route
 from app.models.store import Store
 from app.models.terrain import Terrain
 from app.models.vehicle import Vehicle, VehicleType
+from app.models.vehicle_attendance import VehicleAttendance
+from app.models.driver_scheduling import DriverAttendance, DriverSchedule
 from app.services.audit_log_service import AuditAction
 from app.services.auth_service import AuthService
 
@@ -101,6 +103,8 @@ def _setup_driver_tasks(session):
         trip_no=1,
         route_id=route.id,
         total_load=Decimal("100"),
+        actual_driver_id=driver_a.id,
+        driver_username_snapshot=driver_a.username,
     )
     order_b = DispatchOrder(
         plan_id=plan.id,
@@ -109,6 +113,8 @@ def _setup_driver_tasks(session):
         trip_no=1,
         route_id=route.id,
         total_load=Decimal("120"),
+        actual_driver_id=driver_b.id,
+        driver_username_snapshot=driver_b.username,
     )
     session.add_all([order_a, order_b])
     session.flush()
@@ -126,6 +132,10 @@ def _setup_driver_tasks(session):
             ),
         ]
     )
+    for driver, vehicle, period in [(driver_a, vehicle_a, 'MORNING'), (driver_b, vehicle_b, 'AFTERNOON')]:
+        session.add(VehicleAttendance(date=today, vehicle_id=vehicle.id, available=True))
+        session.add(DriverAttendance(date=today, period=period, driver_id=driver.id, available=True, actor_id=driver.id))
+        session.add(DriverSchedule(date=today, period=period, vehicle_id=vehicle.id, driver_id=driver.id, kind='NORMAL', status='ACTIVE', actor_id=driver.id))
     session.commit()
     return driver_a, driver_b, order_a, order_b, demand_a, demand_b
 
@@ -161,7 +171,7 @@ def test_driver_login_rejects_non_driver_account(client):
     assert response.status_code == 401
 
 
-def test_unbound_driver_login_has_clear_error_without_success_audit(client, session):
+def test_unbound_driver_can_login_for_substitution_without_default_vehicle(client, session):
     driver = AuthService(session).create_user(
         "unbound-driver", "DriverPass123!", UserRole.DRIVER
     )
@@ -169,17 +179,16 @@ def test_unbound_driver_login_has_clear_error_without_success_audit(client, sess
         "/api/driver/auth/login",
         json={"username": driver.username, "password": "DriverPass123!"},
     )
-    assert response.status_code == 409
-    assert response.json() == {
-        "detail": "当前司机未绑定车辆，请联系管理员",
-        "code": "DRIVER_VEHICLE_UNBOUND",
-    }
+    assert response.status_code == 200
+    headers = {'Authorization': 'Bearer ' + response.json()['access_token']}
+    assert client.get('/api/driver/profile', headers=headers).json()['vehicle'] is None
+    assert client.get('/api/driver/tasks/today', headers=headers).json() == []
     assert session.scalar(
         select(AuditLog).where(
             AuditLog.action == AuditAction.LOGIN,
             AuditLog.user_id == driver.id,
         )
-    ) is None
+    ) is not None
 
 
 def test_disabled_driver_login_does_not_reveal_account_state(client, session):

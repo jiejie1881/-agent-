@@ -21,6 +21,7 @@ from app.schemas.dispatch_validation import (
 
 class DispatchValidationService:
     def __init__(self, session: Session) -> None:
+        self.session = session
         self.vehicle_repository = VehicleRepository(session)
         self.demand_repository = DeliveryDemandRepository(session)
         self.route_repository = RouteRepository(session)

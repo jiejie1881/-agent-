@@ -13,6 +13,10 @@ engine_options: dict[str, object] = {
 }
 if settings.database_url.startswith("sqlite"):
     engine_options["connect_args"] = {"check_same_thread": False}
+elif settings.database_url.startswith("mysql"):
+    # Resource locks serialize writes; subsequent eligibility reads must observe
+    # the previous lock holder's commit, not an authentication-time RR snapshot.
+    engine_options["isolation_level"] = "READ COMMITTED"
 
 engine = create_engine(settings.database_url, **engine_options)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)

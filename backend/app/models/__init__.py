@@ -18,6 +18,7 @@ from app.models.vehicle import (
 )
 from app.models.vehicle_attendance import VehicleAttendance
 from app.models.user import User
+from app.models.driver_scheduling import DriverAttendance, DriverAttendanceRule, DriverSchedule, DriverLeave, DriverSubstitution
 from app.models.audit_log import AuditLog
 from app.models.agent_conversation import (
     AgentConversation,
@@ -26,6 +27,7 @@ from app.models.agent_conversation import (
 from app.models.agent_pending_action import AgentPendingAction
 
 __all__ = [
+    "DriverAttendance", "DriverAttendanceRule", "DriverSchedule", "DriverLeave", "DriverSubstitution",
     "Terrain",
     "Route",
     "RouteTerrainConfig",

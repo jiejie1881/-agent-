@@ -41,12 +41,7 @@ class AuthService:
             raise AuthenticationError("用户名或密码错误")
         if required_role is not None and user.role != required_role:
             raise AuthenticationError("用户名或密码错误")
-        if required_role == UserRole.DRIVER and user.assigned_vehicle is None:
-            raise BusinessError(
-                "当前司机未绑定车辆，请联系管理员",
-                status_code=409,
-                code="DRIVER_VEHICLE_UNBOUND",
-            )
+        # 代班司机可没有默认车辆；任务授权依据实际排班与任务快照。
         tokens = self._tokens_for(user)
         AuditLogService(self.session).add(
             user,

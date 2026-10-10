@@ -293,7 +293,7 @@ def _ensure_demands(
         )
 
 
-def seed_demo(session: Session, password: str = DEFAULT_DEMO_PASSWORD) -> DemoSeedSummary:
+def seed_demo(session: Session, password: str = DEFAULT_DEMO_PASSWORD, driver_credentials: dict[str, str] | None = None) -> DemoSeedSummary:
     """Idempotently fill the DEMO_ data and generate V1 through the real service."""
 
     users = tuple(
@@ -418,6 +418,17 @@ def seed_demo(session: Session, password: str = DEFAULT_DEMO_PASSWORD) -> DemoSe
             session, code, plate, type_by_code[type_code]
         )
         _ensure_attendance(session, vehicle, available)
+        from app.scripts.seed_driver_accounts import ensure_demo_driver
+        from app.schemas.driver_scheduling import AttendanceInput, ScheduleInput
+        from app.services.driver_scheduling_service import DriverSchedulingService
+        driver, initial_password = ensure_demo_driver(session, vehicle, actor)
+        if initial_password and driver_credentials is not None:
+            driver_credentials[driver.username] = initial_password
+        scheduling = DriverSchedulingService(session)
+        for period in ("MORNING", "AFTERNOON"):
+            scheduling.set_attendance(AttendanceInput(driver_id=driver.id, date=DEMO_DATE, period=period, available=available), actor)
+            if available and not scheduling.repository.for_vehicle(DEMO_DATE, period, vehicle.id):
+                scheduling.assign(ScheduleInput(date=DEMO_DATE, period=period, vehicle_id=vehicle.id, driver_id=driver.id), actor)
         vehicles.append(vehicle)
 
     demand_specs = (
@@ -485,13 +496,20 @@ def main() -> None:
     )
     args = parser.parse_args()
     with SessionLocal() as session:
-        summary = seed_demo(session, args.password)
+        from pathlib import Path
+        from app.scripts.seed_driver_accounts import initialize, read_local_passwords, render_local
+        account_file = Path('../docs/local/司机测试账号_本地.md')
+        driver_credentials = read_local_passwords([account_file])
+        summary = seed_demo(session, args.password, driver_credentials)
+        records = initialize(session, summary.users[0], driver_credentials)
+        account_file.parent.mkdir(parents=True, exist_ok=True)
+        account_file.write_text(render_local(records), encoding='utf-8')
         plan = summary.plan
         assigned_count = sum(len(order.details) for order in plan.orders)
         print("Demo 数据准备完成（幂等，不清理现有数据）")
         print(f"Demo 日期: {DEMO_DATE}")
         print("Demo 用户: demo_admin, demo_dispatcher, demo_viewer")
-        print(f"本地 Demo 默认密码: {args.password}")
+        print("司机初始凭据已写入忽略的本地账号文件，不输出密码")
         print(
             f"方案: #{plan.id} / V{plan.version} / {plan.status.value} "
             f"({'新生成' if summary.created_plan else '已存在，未重复生成'})"

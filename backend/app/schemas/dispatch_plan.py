@@ -11,7 +11,9 @@ from app.domain.enums import (
     DeliveryPeriod,
     DispatchPlanStatus,
     DeliveryPriority,
+    DeliveryStopStatus,
 )
+from app.schemas.driver import DeliveryProofResponse
 from app.schemas.auto_dispatch import DispatchVehicleResponse
 
 
@@ -41,6 +43,12 @@ class PersistedDispatchOrderDetailResponse(BaseModel):
     requires_temperature_control: bool
     min_temperature: Decimal | None
     max_temperature: Decimal | None
+    delivery_status: DeliveryStopStatus
+    receiver_name: str | None
+    receiver_phone: str | None
+    signed_at: datetime | None
+    driver_remark: str | None
+    proofs: list[DeliveryProofResponse]
 
 
 class PersistedDispatchRouteResponse(BaseModel):
@@ -51,6 +59,9 @@ class PersistedDispatchRouteResponse(BaseModel):
 
 class PersistedDispatchOrderResponse(BaseModel):
     id: int
+    actual_driver_id: int | None = None
+    driver_username: str | None = None
+    driver_name: str | None = None
     vehicle: DispatchVehicleResponse
     period: DeliveryPeriod
     trip_no: int

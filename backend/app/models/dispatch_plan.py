@@ -105,6 +105,11 @@ class DispatchOrder(Base):
         ForeignKey("routes.id", ondelete="RESTRICT"), index=True
     )
     total_load: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    actual_driver_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True, nullable=True
+    )
+    driver_username_snapshot: Mapped[str | None] = mapped_column(String(100))
+    driver_name_snapshot: Mapped[str | None] = mapped_column(String(100))
 
     plan: Mapped[DispatchPlan] = relationship(back_populates="orders")
     vehicle: Mapped["Vehicle"] = relationship()

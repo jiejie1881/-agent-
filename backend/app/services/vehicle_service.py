@@ -27,6 +27,8 @@ from app.schemas.vehicle import (
     VehicleUpdate,
 )
 from app.services.base import BaseService
+from app.models.user import User
+from app.services.audit_log_service import AuditLogService
 
 
 class VehicleTypeService(BaseService):
@@ -122,7 +124,7 @@ class VehicleService(BaseService):
         if not driver.is_active:
             raise ConflictError("不能绑定已停用的司机账号")
 
-    def create(self, data: VehicleCreate) -> Vehicle:
+    def create(self, data: VehicleCreate, actor: User | None = None) -> Vehicle:
         self._validate_vehicle_type(data.vehicle_type_id)
         self._validate_driver(data.driver_user_id)
         if self.repository.get_by_code(data.code):
@@ -130,22 +132,29 @@ class VehicleService(BaseService):
         if self.repository.get_by_plate_number(data.plate_number):
             raise ConflictError("车牌号已存在")
         vehicle = Vehicle(**data.model_dump())
-        return self._commit(
-            lambda: self.repository.add(vehicle), "车辆编码或车牌号已存在"
-        )
+        def action():
+            self.repository.add(vehicle)
+            if actor and data.driver_user_id:
+                AuditLogService(self.session).add(actor, "DRIVER_DEFAULT_VEHICLE_CHANGED", "Vehicle", vehicle.id, {"before_driver_id": None, "after_driver_id": data.driver_user_id})
+            return vehicle
+        return self._commit(action, "车辆编码或车牌号已存在")
 
-    def update(self, vehicle_id: int, data: VehicleUpdate) -> Vehicle:
+    def update(self, vehicle_id: int, data: VehicleUpdate, actor: User | None = None) -> Vehicle:
         vehicle = self.get(vehicle_id)
         updates = data.model_dump(exclude_unset=True)
+        before_driver_id = vehicle.driver_user_id
         if "vehicle_type_id" in updates:
             self._validate_vehicle_type(updates["vehicle_type_id"])
         if "driver_user_id" in updates:
             self._validate_driver(updates["driver_user_id"])
         for field, value in updates.items():
             setattr(vehicle, field, value)
-        return self._commit(
-            lambda: self.repository.add(vehicle), "车辆编码或车牌号已存在"
-        )
+        def action():
+            self.repository.add(vehicle)
+            if actor and "driver_user_id" in updates and before_driver_id != vehicle.driver_user_id:
+                AuditLogService(self.session).add(actor, "DRIVER_DEFAULT_VEHICLE_CHANGED", "Vehicle", vehicle.id, {"before_driver_id": before_driver_id, "after_driver_id": vehicle.driver_user_id})
+            return vehicle
+        return self._commit(action, "车辆编码或车牌号已存在")
 
     def delete(self, vehicle_id: int) -> None:
         vehicle = self.get(vehicle_id)

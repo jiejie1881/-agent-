@@ -65,7 +65,7 @@ def _required_permission(request: Request) -> Permission:
         for segment in ("/terrains", "/routes", "/stores", "/vehicle-types", "/vehicles", "/cargo-categories")
     ):
         return Permission.MASTER_DATA_WRITE
-    if any(segment in path for segment in ("/vehicle-attendances", "/delivery-demands")):
+    if any(segment in path for segment in ("/vehicle-attendances", "/delivery-demands", "/driver-management")):
         return Permission.OPERATIONS_WRITE
     if any(
         segment in path

@@ -41,6 +41,9 @@ class FailedStopExampleResponse(BaseModel):
     demand_id: int
     store_name: str
     vehicle_plate: str
+    vehicle_code: str | None = None
+    actual_driver_id: int | None = None
+    actual_driver_name: str | None = None
     current_driver_username: str | None
     arrived_at: datetime | None
     failure_reason: str | None

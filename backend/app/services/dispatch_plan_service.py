@@ -22,6 +22,7 @@ from app.models.user import User
 from app.repositories.dispatch_plan_repository import DispatchPlanRepository
 from app.schemas.auto_dispatch import DispatchVehicleResponse
 from app.schemas.dispatch_validation import DispatchValidationRequest
+from app.schemas.driver import DeliveryProofResponse
 from app.schemas.dispatch_plan import (
     DispatchDemandMoveRequest,
     DispatchPlanDetailResponse,
@@ -81,6 +82,8 @@ class DispatchPlanService:
 
     def publish(self, plan_id: int, actor: User) -> DispatchPlanDetailResponse:
         try:
+            from app.services.driver_leave_service import DriverLeaveService
+            DriverLeaveService(self.session).lock_resources()
             plan = self.repository.get_for_update(plan_id)
             if plan is None:
                 raise NotFoundError("派车方案不存在")
@@ -203,6 +206,8 @@ class DispatchPlanService:
         actor: User,
     ) -> DispatchPlanDetailResponse:
         try:
+            from app.services.driver_leave_service import DriverLeaveService
+            DriverLeaveService(self.session).lock_resources()
             plan = self.repository.get_for_update(plan_id)
             if plan is None:
                 raise NotFoundError("派车方案不存在")
@@ -211,6 +216,16 @@ class DispatchPlanService:
                     f"只有PUBLISHED方案的任务可以{action}"
                 )
             order = self._find_order(plan, order_id, "配送任务")
+            from app.domain.enums import UserRole
+            if actor.role == UserRole.DRIVER and order.actual_driver_id != actor.id:
+                raise NotFoundError("配送任务不存在")
+            from app.services.driver_scheduling_service import DriverSchedulingService
+            scheduling = DriverSchedulingService(self.session)
+            scheduling.repository.lock_vehicle(order.vehicle_id)
+            if target_status == DeliveryDemandStatus.DELIVERING:
+                driver = scheduling.resolve(plan.delivery_date, order.period.value, order.vehicle_id)
+                if driver.id != order.actual_driver_id:
+                    raise BusinessError("任务司机与实际排班不一致", 409, "DRIVER_ASSIGNMENT_STALE")
             if target_status == DeliveryDemandStatus.COMPLETED:
                 for detail in order.details:
                     if detail.delivery_demand.status not in allowed_current:
@@ -585,6 +600,9 @@ class DispatchPlanService:
             **self._to_summary(plan).model_dump(),
             orders=[
                 PersistedDispatchOrderResponse(
+                    actual_driver_id=order.actual_driver_id,
+                    driver_username=order.driver_username_snapshot,
+                    driver_name=order.driver_name_snapshot,
                     id=order.id,
                     vehicle=DispatchVehicleResponse(
                         id=order.vehicle.id,
@@ -620,6 +638,12 @@ class DispatchPlanService:
                             requires_temperature_control=detail.delivery_demand.requires_temperature_control,
                             min_temperature=detail.delivery_demand.min_temperature,
                             max_temperature=detail.delivery_demand.max_temperature,
+                            delivery_status=detail.delivery_status,
+                            receiver_name=detail.receiver_name,
+                            receiver_phone=detail.receiver_phone,
+                            signed_at=detail.signed_at,
+                            driver_remark=detail.driver_remark,
+                            proofs=[DeliveryProofResponse.model_validate(proof, from_attributes=True) for proof in sorted(detail.proofs, key=lambda item: item.id)],
                         )
                         for detail in sorted(order.details, key=lambda item: item.id)
                     ],

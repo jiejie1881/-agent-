@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.domain.enums import DispatchPlanStatus
 from app.models.delivery_demand import DeliveryDemand
-from app.models.dispatch_plan import DispatchOrder, DispatchOrderDetail, DispatchPlan
+from app.models.dispatch_plan import DeliveryProof, DispatchOrder, DispatchOrderDetail, DispatchPlan
 from app.models.vehicle import Vehicle
 
 
@@ -18,7 +18,7 @@ class DriverTaskRepository:
             self._statement()
             .where(
                 DispatchOrder.id == task_id,
-                Vehicle.driver_user_id == driver_user_id,
+                DispatchOrder.actual_driver_id == driver_user_id,
                 DispatchPlan.status == DispatchPlanStatus.PUBLISHED,
             )
         )
@@ -34,7 +34,7 @@ class DriverTaskRepository:
         limit: int = 100,
     ) -> tuple[list[DispatchOrder], int]:
         filters = [
-            Vehicle.driver_user_id == driver_user_id,
+            DispatchOrder.actual_driver_id == driver_user_id,
             DispatchPlan.status == DispatchPlanStatus.PUBLISHED,
         ]
         if delivery_date is not None:

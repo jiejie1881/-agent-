@@ -1,8 +1,12 @@
 from sqlalchemy.orm import Session
+from dataclasses import replace
 from sqlalchemy.exc import IntegrityError
 
 from app.dispatch_engine.dispatch_engine import DispatchEngine
-from app.domain.enums import DeliveryDemandStatus, DispatchPlanStatus
+from app.domain.enums import DeliveryDemandStatus, DispatchPlanStatus, DeliveryPeriod
+from app.domain.exceptions import BusinessError
+from app.dispatch_engine.models import DispatchEngineResult, UnassignedDemand
+from app.services.driver_scheduling_service import DriverSchedulingService
 from app.domain.exceptions import ConflictError
 from app.repositories.dispatch_engine_repository import DispatchEngineRepository
 from app.repositories.dispatch_plan_repository import DispatchPlanRepository
@@ -29,8 +33,34 @@ class AutoDispatchService:
         self.engine = DispatchEngine()
 
     def dispatch(self, data: AutoDispatchRequest, actor: User) -> AutoDispatchResponse:
+        scheduling = DriverSchedulingService(self.session)
+        from app.services.driver_leave_service import DriverLeaveService
+        DriverLeaveService(self.session).lock_resources()
         engine_input = self.repository.load(data.date)
-        result = self.engine.dispatch(engine_input)
+        trips, unassigned = [], []
+        for period in DeliveryPeriod:
+            eligible = []
+            excluded = []
+            for vehicle in engine_input.vehicles:
+                try:
+                    scheduling.resolve(data.date, period.value, vehicle.id)
+                    eligible.append(vehicle)
+                except BusinessError as exc:
+                    excluded.append(f"车辆#{vehicle.id}: {exc.code}: {exc.message}")
+                    continue
+            demands = tuple(d for d in engine_input.demands if d.period == period)
+            partial = self.engine.dispatch(replace(engine_input, demands=demands, vehicles=tuple(eligible)))
+            trips.extend(partial.trips)
+            if not eligible and engine_input.vehicles:
+                unassigned.extend(UnassignedDemand(d, ("所有出勤候选车辆均未通过司机可用性校验", *excluded)) for d in demands)
+            else:
+                unassigned.extend(
+                    UnassignedDemand(item.demand, (*item.reasons,
+                        "另有车辆因司机可用性被排除；下列记录不代表这些车辆满足该需求的其他运输约束", *excluded))
+                    if excluded else item
+                    for item in partial.unassigned_demands
+                )
+        result = DispatchEngineResult(data.date, tuple(trips), tuple(unassigned))
         try:
             version = self.plan_repository.next_version(result.dispatch_date)
             plan = self.plan_repository.save_result(
@@ -38,6 +68,11 @@ class AutoDispatchService:
                 version=version,
                 status=DispatchPlanStatus.DRAFT,
             )
+            for order in plan.orders:
+                driver = scheduling.resolve(data.date, order.period.value, order.vehicle_id)
+                order.actual_driver_id = driver.id
+                order.driver_username_snapshot = driver.username
+                order.driver_name_snapshot = driver.display_name
             assigned_demand_ids = {
                 item.demand.id
                 for trip in result.trips
@@ -65,6 +100,9 @@ class AutoDispatchService:
                 },
             )
             self.session.commit()
+        except BusinessError:
+            self.session.rollback()
+            raise
         except IntegrityError as exc:
             self.session.rollback()
             raise ConflictError("派车方案版本生成冲突，请重新生成") from exc

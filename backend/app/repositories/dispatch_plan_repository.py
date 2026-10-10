@@ -9,6 +9,7 @@ from app.models.delivery_demand import DeliveryDemand
 from app.models.dispatch_plan import (
     DispatchOrder,
     DispatchOrderDetail,
+    DeliveryProof,
     DispatchPlan,
     DispatchPlanUnassignedDemand,
 )
@@ -81,6 +82,7 @@ class DispatchPlanRepository:
             self._detail_statement()
             .where(DispatchPlan.id == plan_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         return self.session.scalar(statement)
 
@@ -161,6 +163,8 @@ class DispatchPlanRepository:
     @staticmethod
     def _detail_statement():
         return select(DispatchPlan).options(
+            selectinload(DispatchPlan.orders).selectinload(DispatchOrder.details)
+            .selectinload(DispatchOrderDetail.proofs),
             selectinload(DispatchPlan.orders)
             .joinedload(DispatchOrder.vehicle)
             .joinedload(Vehicle.vehicle_type),

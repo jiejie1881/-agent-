@@ -94,6 +94,9 @@ class DailyExceptionService:
                                     "demand_id": detail.delivery_demand_id,
                                     "store_name": detail.delivery_demand.store.name,
                                     "vehicle_plate": order.vehicle.plate_number,
+                                    "vehicle_code": order.vehicle.code,
+                                    "actual_driver_id": order.actual_driver_id,
+                                    "actual_driver_name": order.driver_name_snapshot,
                                     "current_driver_username": (
                                         order.vehicle.driver.username
                                         if order.vehicle.driver else None
@@ -163,7 +166,7 @@ class DailyExceptionService:
             "notices": notices,
             "note": (
                 "只读查询时刻快照。未分配记录属于所选方案；方案外只列PENDING及由有效草稿占用的PLANNED需求。"
-                "司机为车辆当前绑定账号，到店时间不是失败发生时间；系统未记录独立的配送失败时间。"
+                "实际执行司机取任务归属快照，缺失时不推断；兼容字段current_driver_username仍为当前绑定账号。到店时间不是失败发生时间。"
                 "不依据本报告推断配送延误，也不修改派车或配送状态。"
             ),
         }

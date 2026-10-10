@@ -23,7 +23,9 @@ class DriverVehicleResponse(BaseModel):
 class DriverProfileResponse(BaseModel):
     user_id: int
     username: str
+    display_name: str | None = None
     vehicle: DriverVehicleResponse | None
+    today_schedules: list[dict[str, object]] = Field(default_factory=list)
 
 
 class DriverRouteResponse(BaseModel):

@@ -29,6 +29,27 @@ def driver_login(data: LoginRequest, db: DbSession):
 
 tasks_router = APIRouter(dependencies=[Depends(require_driver)])
 
+from app.schemas.driver_leave import LeaveRequestInput
+from app.services.driver_leave_service import DriverLeaveService
+
+
+@tasks_router.post("/leaves")
+def submit_leave(data: LeaveRequestInput, current_user: DriverUser, db: DbSession):
+    service = DriverLeaveService(db)
+    return service.serialize(service.submit(data, current_user), current_user)
+
+
+@tasks_router.get("/leaves")
+def my_leaves(current_user: DriverUser, db: DbSession):
+    service = DriverLeaveService(db)
+    return [service.serialize(row, current_user) for row in service.repository.leaves(current_user.id)]
+
+
+@tasks_router.post("/leaves/{leave_id}/withdraw")
+def withdraw_leave(leave_id: int, current_user: DriverUser, db: DbSession):
+    service = DriverLeaveService(db)
+    return service.serialize(service.withdraw(leave_id, current_user), current_user)
+
 
 @tasks_router.get("/profile", response_model=DriverProfileResponse)
 def get_driver_profile(current_user: DriverUser, db: DbSession):

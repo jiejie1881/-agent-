@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from app.domain.enums import DeliveryDemandStatus, DeliveryPriority, DriverTaskStatus
-from app.domain.exceptions import ConflictError, NotFoundError
+from app.domain.exceptions import BusinessError, ConflictError, NotFoundError
 from app.models.dispatch_plan import DispatchOrder
 from app.models.user import User
 from app.repositories.driver_task_repository import DriverTaskRepository
@@ -22,6 +22,7 @@ from app.schemas.driver import (
 )
 from app.services.delivery_stop_service import DeliveryStopService
 from app.services.dispatch_plan_service import DispatchPlanService
+from app.services.driver_scheduling_service import DriverSchedulingService
 
 
 class DriverService:
@@ -36,8 +37,24 @@ class DriverService:
         return DriverProfileResponse(
             user_id=current_user.id,
             username=current_user.username,
+            display_name=current_user.display_name,
             vehicle=self._vehicle_response(vehicle) if vehicle else None,
+            today_schedules=self._today_schedules(current_user.id),
         )
+
+    def _today_schedules(self, driver_id):
+        scheduling = DriverSchedulingService(self.session)
+        rows = scheduling.repository.schedules(date.today(), driver_id)
+        result = []
+        for row in rows:
+            vehicle = self.vehicle_repository.get(row.vehicle_id)
+            try:
+                scheduling.resolve(row.date, row.period, row.vehicle_id, for_update=False)
+                conflict = None
+            except BusinessError as exc:
+                conflict = exc.message
+            result.append({"id": row.id, "period": row.period, "kind": row.kind, "status": row.status, "vehicle": self._vehicle_response(vehicle).model_dump(), "conflict": conflict})
+        return result
 
     def today(self, current_user: User) -> list[DriverTaskSummaryResponse]:
         orders, _ = self.repository.list_for_driver(

@@ -34,6 +34,20 @@ def create_terrain_route_and_stores(client, store_quantities):
     return terrain, route, stores
 
 
+def arrange_test_driver(client, vehicle, day='2026-09-24'):
+    driver = client.post('/api/v1/driver-management/drivers', json={
+        'username': f"test-driver-{vehicle['id']}", 'password': 'TestDriver123!'
+    })
+    assert driver.status_code == 200
+    for period in ('MORNING', 'AFTERNOON'):
+        assert client.put('/api/v1/driver-management/attendances', json={
+            'driver_id': driver.json()['id'], 'date': day, 'period': period, 'available': True
+        }).status_code == 200
+        assert client.post('/api/v1/driver-management/schedules', json={
+            'driver_id': driver.json()['id'], 'vehicle_id': vehicle['id'], 'date': day, 'period': period
+        }).status_code == 200
+
+
 def create_vehicle(client, terrain_id, code, name, min_load, max_load, plate):
     vehicle_type = client.post(
         "/api/v1/vehicle-types",
@@ -60,6 +74,7 @@ def create_vehicle(client, terrain_id, code, name, min_load, max_load, plate):
         "/api/v1/vehicle-attendances",
         json={"date": "2026-09-24", "vehicle_id": vehicle["id"], "available": True},
     )
+    arrange_test_driver(client, vehicle)
     return vehicle
 
 

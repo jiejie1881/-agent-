@@ -1,4 +1,4 @@
-from tests.test_auto_dispatch_api import create_terrain_route_and_stores
+from tests.test_auto_dispatch_api import create_terrain_route_and_stores, arrange_test_driver
 
 
 def create_small_vans(client, terrain_id, count=2):
@@ -34,6 +34,7 @@ def create_small_vans(client, terrain_id, count=2):
             },
         ).json()
         vehicles.append((vehicle, attendance))
+        arrange_test_driver(client, vehicle)
     return vehicle_type, vehicles
 
 

@@ -6,6 +6,7 @@ from app.domain.exceptions import BusinessError
 from app.models.dispatch_plan import DispatchPlan
 from app.schemas.dispatch_validation import DispatchValidationRequest
 from app.services.dispatch_validation_service import DispatchValidationService
+from app.services.driver_scheduling_service import DriverSchedulingService
 
 
 class DispatchPlanPublicationValidator:
@@ -22,11 +23,19 @@ class DispatchPlanPublicationValidator:
         self.validation_service = validation_service
         self.load_constraint = LoadConstraint()
 
-    def validate(self, plan: DispatchPlan) -> list[dict[str, object]]:
+    def validate(self, plan: DispatchPlan, *, for_update: bool = True) -> list[dict[str, object]]:
         issues: list[dict[str, object]] = []
         first_assignment: dict[int, int] = {}
 
         for order in sorted(plan.orders, key=lambda item: item.id):
+            try:
+                driver = DriverSchedulingService(self.validation_service.session).resolve(
+                    plan.delivery_date, order.period.value, order.vehicle_id, for_update=for_update
+                )
+                if order.actual_driver_id != driver.id:
+                    issues.append(self._issue("DRIVER_ASSIGNMENT_STALE", "任务实际司机与当前排班不一致，请更新排班后重新生成方案", order.id, None))
+            except BusinessError as exc:
+                issues.append(self._issue(exc.code or "DRIVER_UNAVAILABLE", exc.message, order.id, None))
             actual_load = sum(
                 (detail.quantity for detail in order.details), Decimal("0")
             )
