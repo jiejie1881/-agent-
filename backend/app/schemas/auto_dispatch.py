@@ -69,6 +69,7 @@ class UnassignedDemandResponse(BaseModel):
 
 
 class AutoDispatchResponse(BaseModel):
+    quality_warning: str | None = None
     plan_id: int
     date: date
     version: int

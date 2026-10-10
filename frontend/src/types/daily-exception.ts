@@ -40,6 +40,9 @@ export interface DailyExceptionReport {
     store_name: string
     vehicle_plate: string
     current_driver_username: string | null
+    vehicle_code?: string | null
+    actual_driver_id?: number | null
+    actual_driver_name?: string | null
     arrived_at: string | null
     failure_reason: string | null
   }>

@@ -2,6 +2,7 @@
 import { Edit, Lock, Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
+import { businessRef } from '@/utils/businessLabels'
 
 import {
   createDeliveryDemand,
@@ -19,6 +20,7 @@ import type {
 import type { Store } from '@/types/store'
 import type { CargoCategory } from '@/types/cargo'
 import DeliveryDemandFormDialog from '@/views/operations/components/DeliveryDemandFormDialog.vue'
+import AIDemandDialog from '@/views/operations/components/AIDemandDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -41,6 +43,12 @@ const demands = ref<DeliveryDemand[]>([])
 const stores = ref<Store[]>([])
 const cargoCategories = ref<CargoCategory[]>([])
 const dialogVisible = ref(false)
+const aiDialogVisible = ref(false)
+async function aiCreated(dates: string[]) {
+  if (dates.length === 1 && dates[0]) selectedDate.value = dates[0]
+  await loadData()
+  if (dates.length > 1) ElMessage.info(`已创建跨日期需求：${dates.join('、')}，切换对应日期查看`)
+}
 const editingDemand = ref<DeliveryDemand | null>(null)
 
 const statusMeta: Record<DeliveryDemandStatus, { label: string; type: '' | 'success' | 'warning' | 'info' | 'primary' | 'danger' }> = {
@@ -120,13 +128,14 @@ onMounted(loadData)
 
 <template>
   <section class="operation-page">
+    <AIDemandDialog v-model="aiDialogVisible" :date="selectedDate" @created="aiCreated" />
     <div class="page-heading">
       <div>
         <p class="page-heading__eyebrow">每日运营</p>
         <h1>配送需求</h1>
         <p>按配送日期维护门店上午和下午的配送货量。</p>
       </div>
-      <el-button v-if="authStore.canOperate" type="primary" :icon="Plus" @click="openCreate">新增需求</el-button>
+      <div><el-button v-if="authStore.user?.role === 'ADMIN'" @click="aiDialogVisible = true">AI 智能录入</el-button><el-button v-if="authStore.canOperate" type="primary" :icon="Plus" @click="openCreate">新增需求</el-button></div>
     </div>
 
     <el-card class="filter-card" shadow="never">
@@ -166,6 +175,7 @@ onMounted(loadData)
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="filteredDemands" row-key="id" stripe>
         <template #empty><el-empty description="当天暂无配送需求" :image-size="92" /></template>
+        <el-table-column label="需求编号" min-width="190"><template #default="{row}">{{ businessRef('DEM',row.id,row.date) }}</template></el-table-column>
         <el-table-column label="门店" min-width="210">
           <template #default="{ row }">
             <div class="primary-text">{{ row.store.name }}</div>

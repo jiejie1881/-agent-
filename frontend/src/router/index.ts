@@ -20,6 +20,10 @@ import CargoCategoryListView from '@/views/cargo-categories/CargoCategoryListVie
 import DailyExceptionView from '@/views/dispatch/DailyExceptionView.vue'
 
 const children: RouteRecordRaw[] = [
+  { path: 'dispatch/quality', name: 'dispatch-quality', component: () => import('@/views/dispatch/DispatchQualityView.vue'), meta: { title: '调度质量报告', group: '派车中心' } },
+  { path: 'operations/leave-approval', component: () => import('@/views/drivers/DriverLeaveView.vue'), meta: { title: '请假审批', group: '每日运营' } },
+  { path: 'operations/substitutions', component: () => import('@/views/drivers/DriverLeaveView.vue'), props: { mode: 'substitution' }, meta: { title: '代班调度', group: '每日运营' } },
+  { path: 'operations/drivers', name: 'driver-scheduling', component: () => import('@/views/drivers/DriverSchedulingView.vue'), meta: { title: '司机与排班', group: '每日运营' } },
   {
     path: 'master/cargo-categories',
     name: 'cargo-categories',

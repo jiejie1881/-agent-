@@ -1,4 +1,5 @@
 import type { DeliveryDemandStatus, DeliveryPeriod } from '@/types/delivery-demand'
+interface DeliveryProof { id: number; url: string }
 
 export type DispatchPlanStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
 
@@ -59,6 +60,7 @@ export interface AutoDispatchUnassignedDemand {
 }
 
 export interface AutoDispatchResult {
+  quality_warning?: string | null
   plan_id: number
   date: string
   version: number
@@ -93,10 +95,19 @@ export interface PersistedDispatchOrderDetail {
   requires_temperature_control: boolean
   min_temperature: string | null
   max_temperature: string | null
+  delivery_status: 'PENDING' | 'ARRIVED' | 'SIGNED' | 'FAILED'
+  receiver_name: string | null
+  receiver_phone: string | null
+  signed_at: string | null
+  driver_remark: string | null
+  proofs: DeliveryProof[]
 }
 
 export interface PersistedDispatchOrder {
   id: number
+  actual_driver_id?: number | null
+  driver_username?: string | null
+  driver_name?: string | null
   vehicle: DispatchVehicle
   period: DeliveryPeriod
   trip_no: number

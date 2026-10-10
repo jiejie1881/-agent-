@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     agent_api_key: SecretStr | None = None
     agent_base_url: str | None = None
     agent_timeout: float = Field(default=30.0, gt=0)
+    business_timezone: str = "Asia/Shanghai"
+    quality_load_target: float = Field(default=0.8, gt=0, le=1)
     agent_max_tool_calls: int = Field(default=5, ge=1, le=20)
     agent_history_max_messages: int = Field(default=20, ge=1, le=100)
     agent_pending_action_expire_minutes: int = Field(default=15, ge=1, le=60)
@@ -36,6 +38,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_rag_chunking(self):
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        try:
+            ZoneInfo(self.business_timezone)
+        except ZoneInfoNotFoundError:
+            raise ValueError('BUSINESS_TIMEZONE must be a valid IANA timezone') from None
         if self.rag_chunk_overlap >= self.rag_chunk_size:
             raise ValueError("RAG_CHUNK_OVERLAP must be smaller than RAG_CHUNK_SIZE")
         return self

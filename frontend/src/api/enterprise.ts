@@ -1,0 +1,7 @@
+import http from '@/api/http'
+export interface DriverIdentity { id: number; employee_code: string; name: string }
+export interface EnterpriseTask { id: number; code: string; plan_id: number; plan_code: string; vehicle_id: number; driver: DriverIdentity | null; period: string; trip_no: number; total_load: number; route_code: string; route_name: string; status: string }
+export interface EnterpriseVehicle { id: number; code: string; plate_number: string; type_name: string; type_code: string; max_load: number; is_active: boolean; default_driver: DriverIdentity | null; attendance: boolean | null; shifts: Record<string, {effective_driver_id: number | null; driver: DriverIdentity | null; availability_status: string; assignment_type: string; unavailable_reason: string | null}>; tasks: EnterpriseTask[] }
+export interface EnterpriseDriver extends DriverIdentity { username: string | null; is_active: boolean; phone: null; phone_notice: string; default_vehicle: EnterpriseVehicle | null; effective_vehicles: { id: number; code: string; plate_number: string; period: string }[]; leaves: {code: string; status: string; period: string}[]; substitutions: {status: string; period: string; as_substitute: boolean}[]; tasks: EnterpriseTask[] }
+export interface EnterpriseOverview { date: string; vehicles: EnterpriseVehicle[]; drivers: EnterpriseDriver[]; notices: string[] }
+export const fetchEnterpriseOverview = (day: string) => http.get<EnterpriseOverview>('/enterprise/overview', {params: {day}})

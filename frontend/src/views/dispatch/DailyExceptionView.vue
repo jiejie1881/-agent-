@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { businessRef, planRef } from '@/utils/businessLabels'
 import { Calendar, Refresh } from '@element-plus/icons-vue'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -112,7 +113,7 @@ onMounted(loadDate)
         <el-alert v-for="notice in report.notices" :key="notice" :title="notice" type="warning" :closable="false" class="notice" />
         <el-card class="reference-card" shadow="never">
           <template v-if="report.reference_plan">
-            <span>参考方案：V{{ report.reference_plan.version }}</span>
+            <span>参考方案：{{ planRef(report.delivery_date, report.reference_plan.version) }}</span>
             <el-tag :type="report.reference_plan.status === 'PUBLISHED' ? 'success' : 'info'">{{ report.reference_plan.status }}</el-tag>
             <el-button link type="primary" @click="openPlan">查看方案 #{{ report.reference_plan.id }}</el-button>
           </template>
@@ -130,7 +131,7 @@ onMounted(loadDate)
           <el-card shadow="never">
             <template #header>方案内未分配需求 <el-tag type="danger">{{ report.plan_unassigned.count }}</el-tag></template>
             <el-table :data="report.plan_unassigned.examples" empty-text="没有未分配需求">
-              <el-table-column prop="demand_id" label="需求ID" width="90" />
+              <el-table-column label="需求编号" min-width="180"><template #default="{ row }">{{ businessRef('DEM', row.demand_id, report.delivery_date) }}</template></el-table-column>
               <el-table-column prop="store_name" label="门店" min-width="110" />
               <el-table-column prop="priority" label="优先级" width="100" />
               <el-table-column label="方案记录原因" min-width="180"><template #default="scope">{{ scope.row.reasons.join('；') || '未记录' }}</template></el-table-column>
@@ -141,7 +142,7 @@ onMounted(loadDate)
           <el-card shadow="never">
             <template #header>方案外待计划需求 <el-tag type="warning">{{ report.pending_outside_reference_plan.count }}</el-tag></template>
             <el-table :data="report.pending_outside_reference_plan.examples" empty-text="没有方案外待计划需求">
-              <el-table-column prop="demand_id" label="需求ID" width="90" />
+              <el-table-column label="需求编号" min-width="180"><template #default="{ row }">{{ businessRef('DEM', row.demand_id, report.delivery_date) }}</template></el-table-column>
               <el-table-column prop="store_name" label="门店" min-width="120" />
               <el-table-column prop="priority" label="优先级" width="100" />
               <el-table-column prop="period" label="时段" width="120" />
@@ -153,7 +154,7 @@ onMounted(loadDate)
             <template #header>方案车辆出勤异常 <el-tag type="danger">{{ report.plan_vehicle_unavailable.count }}</el-tag></template>
             <el-table :data="report.plan_vehicle_unavailable.examples" empty-text="没有发现出勤异常">
               <el-table-column prop="vehicle_plate" label="车辆" min-width="110" />
-              <el-table-column prop="order_id" label="任务ID" width="90" />
+              <el-table-column label="任务编号" min-width="180"><template #default="{ row }">{{ businessRef('TASK', row.order_id, report.delivery_date) }}</template></el-table-column>
               <el-table-column prop="period" label="时段" width="120" />
               <el-table-column prop="trip_no" label="趟次" width="70" />
               <el-table-column label="异常" min-width="170"><template #default="scope">{{ scope.row.issues.map(issueLabel).join('；') }}</template></el-table-column>
@@ -165,10 +166,10 @@ onMounted(loadDate)
             <template #header>配送失败停靠点 <el-tag type="danger">{{ report.failed_stops.count }}</el-tag></template>
             <el-table :data="report.failed_stops.examples" empty-text="没有配送失败记录">
               <el-table-column prop="store_name" label="门店" min-width="120" />
-              <el-table-column prop="demand_id" label="需求ID" width="90" />
-              <el-table-column prop="order_id" label="任务ID" width="90" />
+              <el-table-column label="需求编号" min-width="180"><template #default="{ row }">{{ businessRef('DEM', row.demand_id, report.delivery_date) }}</template></el-table-column>
+              <el-table-column label="任务编号" min-width="180"><template #default="{ row }">{{ businessRef('TASK', row.order_id, report.delivery_date) }}</template></el-table-column>
               <el-table-column prop="vehicle_plate" label="车辆" min-width="100" />
-              <el-table-column prop="current_driver_username" label="当前绑定司机" min-width="110" />
+              <el-table-column label="实际执行司机" min-width="140"><template #default="{ row }">{{ row.actual_driver_name || '历史未记录' }}<br>{{ businessRef('DRV', row.actual_driver_id) }}</template></el-table-column>
               <el-table-column prop="arrived_at" label="到店时间" min-width="170" />
               <el-table-column prop="failure_reason" label="失败原因" min-width="130" />
             </el-table>

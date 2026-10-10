@@ -32,6 +32,10 @@ import type {
   PersistedDispatchOrder,
 } from '@/types/dispatch-plan'
 import type { DeliveryDemandStatus } from '@/types/delivery-demand'
+import { latestQualityReport } from '@/api/ai-operations'
+import type { QualityReport } from '@/types/ai-operations'
+import { dimensionLabels } from '@/views/dispatch/qualityHelpers'
+import { businessRef, planRef, typeLabel } from '@/utils/businessLabels'
 import { useAuthStore } from '@/stores/auth'
 import DispatchRouteMap from '@/views/dispatch/components/DispatchRouteMap.vue'
 
@@ -44,6 +48,8 @@ const publishing = ref(false)
 const cancelling = ref(false)
 const actionLoadingOrderId = ref<number | null>(null)
 const plan = ref<DispatchPlanDetail | null>(null)
+const qualitySnapshot = ref<QualityReport | null>(null)
+const qualityError = ref('')
 const selectedDemand = ref('')
 const selectedTargetOrderId = ref<number>()
 const issueDialogVisible = ref(false)
@@ -174,6 +180,9 @@ async function loadPlan() {
   loading.value = true
   try {
     plan.value = (await getDispatchPlan(planId.value)).data
+    qualitySnapshot.value = null; qualityError.value = ''
+    try { qualitySnapshot.value = (await latestQualityReport(planId.value)).data }
+    catch { qualityError.value = '质量报告加载失败，不影响方案详情；请到报告页重试。' }
   } catch {
     plan.value = null
   } finally {
@@ -307,8 +316,11 @@ onMounted(loadPlan)
           <el-button class="back-button" :icon="ArrowLeft" circle @click="goBack" />
           <div>
             <p class="page-heading__eyebrow">派车中心 / 方案详情</p>
+            <el-button @click="router.push({ name: 'dispatch-quality', query: { planId } })">查看调度质量评分</el-button>
+            <p v-if="qualitySnapshot">评分快照：{{ qualitySnapshot.total_score ?? '无法评分' }} · 等级 {{ qualitySnapshot.grade ?? '—' }} · 发布校验 {{ qualitySnapshot.publication_validation }} · {{ qualitySnapshot.generated_at }}（非实时，调整后请重新评分）</p>
+            <p v-if="qualityError">{{ qualityError }}</p>
             <div class="title-row">
-              <h1>{{ plan.delivery_date }} · V{{ plan.version }}</h1>
+              <h1>{{ planRef(plan.delivery_date,plan.version) }}</h1>
               <el-tag :type="currentStatus.tagType" size="large" effect="light">
                 {{ currentStatus.label }}
               </el-tag>
@@ -317,6 +329,24 @@ onMounted(loadPlan)
           </div>
         </div>
       </div>
+
+      <el-collapse v-if="qualitySnapshot">
+        <el-collapse-item title="六维评分与扣分原因（历史快照）" name="quality">
+          <el-table :data="qualitySnapshot.dimensions">
+            <el-table-column label="评分维度" min-width="160">
+              <template #default="{ row }">{{ dimensionLabels[row.key] ?? row.key }}</template>
+            </el-table-column>
+            <el-table-column label="得分 / 满分" min-width="120">
+              <template #default="{ row }">{{ row.score }} / {{ row.max_score }}</template>
+            </el-table-column>
+            <el-table-column prop="deduction" label="扣分" width="90" />
+            <el-table-column label="扣分原因" min-width="250">
+              <template #default="{ row }">{{ row.deduction_reasons?.join('；') || '本项无扣分' }}</template>
+            </el-table-column>
+          </el-table>
+          <p>此处为报告生成时的快照；当前方案操作仍以正式业务校验为准。</p>
+        </el-collapse-item>
+      </el-collapse>
 
       <div class="status-banner" :class="currentStatus.className">
         <el-icon><Warning /></el-icon>
@@ -436,7 +466,7 @@ onMounted(loadPlan)
                 <div class="vehicle-icon"><Van /></div>
                 <div>
                   <h3>{{ orderTitle(order) }}</h3>
-                  <p>任务 ID：{{ order.id }}</p>
+                  <p>{{ businessRef('TASK',order.id,plan.delivery_date) }} · 内部ID {{ order.id }}</p>
                 </div>
               </div>
               <div class="order-tags">
@@ -479,8 +509,9 @@ onMounted(loadPlan)
           </div>
 
           <div class="order-facts">
+            <div><span>实际司机</span><strong>{{ order.driver_name || '姓名未填写' }}</strong><small>{{ businessRef('DRV',order.actual_driver_id) }} · 任务执行人快照</small></div>
             <div><span>车辆</span><strong>{{ order.vehicle.plate_number }}</strong><small>{{ order.vehicle.code }}</small></div>
-            <div><span>车型</span><strong>{{ order.vehicle.vehicle_type_name }}</strong><small>{{ order.vehicle.vehicle_type_code }}</small></div>
+            <div><span>车型</span><strong>{{ typeLabel(order.vehicle.vehicle_type_code,order.vehicle.vehicle_type_name) }}</strong><small>{{ order.vehicle.vehicle_type_code }}</small></div>
             <div><span>线路</span><strong>{{ order.route.name }}</strong><small>{{ order.route.code }}</small></div>
             <div><span>总载重</span><strong class="load-value">{{ formatQuantity(order.total_load) }}</strong><small>本趟明细合计</small></div>
           </div>
@@ -504,6 +535,8 @@ onMounted(loadPlan)
             <el-table-column prop="delivery_demand_id" label="需求 ID" min-width="120" align="center" />
             <el-table-column label="货物/优先级" min-width="170"><template #default="{ row }"><strong>{{ row.cargo_category_name }}</strong><div class="store-code">{{ row.cargo_category_code }} · {{ row.priority === 'URGENT' ? '加急' : row.priority === 'HIGH' ? '高' : '普通' }}</div></template></el-table-column>
             <el-table-column label="温控要求" min-width="160"><template #default="{ row }">{{ row.requires_temperature_control ? `${row.min_temperature}℃ ~ ${row.max_temperature}℃` : '无需温控' }}</template></el-table-column>
+            <el-table-column label="需求编号" min-width="190"><template #default="{row}">{{ businessRef('DEM',row.delivery_demand_id,plan.delivery_date) }}</template></el-table-column>
+          <el-table-column label="优先级" min-width="100"><template #default="{ row }">{{ row.priority === 'URGENT' ? '加急' : row.priority === 'HIGH' ? '高' : '普通' }}</template></el-table-column>
             <el-table-column label="执行状态" min-width="130" align="center">
               <template #default="{ row }"><el-tag :type="executionStatusMeta[row.status as DeliveryDemandStatus].type" size="small">{{ executionStatusMeta[row.status as DeliveryDemandStatus].label }}</el-tag></template>
             </el-table-column>
@@ -538,6 +571,7 @@ onMounted(loadPlan)
           </el-table-column>
           <el-table-column label="货物/优先级" min-width="170"><template #default="{ row }"><strong>{{ row.cargo_category_name }}</strong><div class="store-code">{{ row.priority === 'URGENT' ? '加急' : row.priority === 'HIGH' ? '高' : '普通' }}</div></template></el-table-column>
           <el-table-column label="温控" min-width="150"><template #default="{ row }">{{ row.requires_temperature_control ? `${row.min_temperature}℃ ~ ${row.max_temperature}℃` : '无需温控' }}</template></el-table-column>
+          <el-table-column label="优先级" min-width="100"><template #default="{ row }">{{ row.priority === 'URGENT' ? '加急' : row.priority === 'HIGH' ? '高' : '普通' }}</template></el-table-column>
           <el-table-column label="未分配原因" min-width="320">
             <template #default="{ row }">
               <div class="reason-list">

@@ -50,6 +50,8 @@ def _required_permission(request: Request) -> Permission:
     path = request.url.path
     if request.method == "POST":
         normalized_path = path.rstrip("/")
+        if normalized_path.endswith('/dispatch-plans/compare-quality'):
+            return Permission.READ  # 只读快照对比，不产生业务写入。
         if normalized_path.endswith("/agent/chat") or normalized_path.endswith(
             "/agent/conversations"
         ) or (

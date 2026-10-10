@@ -60,7 +60,7 @@ class DeliveryDemandService(BaseService):
         if self.store_repository.get(store_id) is None:
             raise NotFoundError("门店不存在")
 
-    def create(self, data: DeliveryDemandCreate, actor: User) -> DeliveryDemand:
+    def create(self, data: DeliveryDemandCreate, actor: User, *, commit: bool = True) -> DeliveryDemand:
         self.status_service.validate_initial(data.status)
         self._validate_store(data.store_id)
         if self.repository.get_by_business_key(
@@ -82,6 +82,8 @@ class DeliveryDemandService(BaseService):
             )
             return created
 
+        if not commit:
+            return action()
         return self._commit(
             action,
             "该门店当天同一时段已有配送需求",

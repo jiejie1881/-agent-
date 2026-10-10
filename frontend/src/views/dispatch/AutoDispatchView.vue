@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { planRef } from '@/utils/businessLabels'
 import { Calendar, Promotion, Tickets } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, ref } from 'vue'
@@ -39,6 +40,7 @@ async function generate() {
   try {
     const response = await generateAutoDispatch(selectedDate.value)
     latestResult.value = response.data
+    if (response.data.quality_warning) ElMessage.warning(response.data.quality_warning)
     refreshToken.value += 1
     ElMessage.success(`已生成 ${selectedDate.value} 的 V${response.data.version} 草稿方案`)
   } catch {
@@ -102,7 +104,7 @@ function openLatestDetail() {
           <div class="result-version">V{{ latestResult.version }}</div>
           <div>
             <h2>派车方案已生成</h2>
-            <p>方案 ID：{{ latestResult.plan_id }} · 状态：{{ latestResult.status }}</p>
+        <p>方案：{{ planRef(latestResult.date, latestResult.version) }} · 状态：{{ latestResult.status }}（内部 ID：{{ latestResult.plan_id }}）</p>
           </div>
         </div>
         <div class="result-metrics">

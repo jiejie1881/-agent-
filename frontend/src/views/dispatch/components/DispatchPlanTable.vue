@@ -2,6 +2,7 @@
 import { Refresh } from '@element-plus/icons-vue'
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { planRef } from '@/utils/businessLabels'
 
 import { getDispatchPlan, listDispatchPlans } from '@/api/dispatch-plans'
 import type {
@@ -110,6 +111,7 @@ defineExpose({ reload: loadPlans })
       <template #empty>
         <el-empty description="当天尚未生成派车方案" :image-size="92" />
       </template>
+      <el-table-column label="方案编号" min-width="220"><template #default="{row}">{{ planRef(row.delivery_date,row.version) }}</template></el-table-column>
       <el-table-column label="版本" width="110" align="center">
         <template #default="{ row }"><span class="version-badge">V{{ row.version }}</span></template>
       </el-table-column>

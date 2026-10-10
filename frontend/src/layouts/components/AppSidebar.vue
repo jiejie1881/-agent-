@@ -65,6 +65,9 @@ const activeMenu = computed(() => {
         <el-sub-menu index="operations">
           <template #title><el-icon><Calendar /></el-icon><span>每日运营</span></template>
           <el-menu-item index="/operations/vehicle-attendances"><el-icon><Tickets /></el-icon><span>车辆出勤</span></el-menu-item>
+          <el-menu-item index="/operations/drivers"><el-icon><UserFilled /></el-icon><span>司机与排班</span></el-menu-item>
+          <el-menu-item index="/operations/leave-approval"><el-icon><DocumentChecked /></el-icon><span>请假审批</span></el-menu-item>
+          <el-menu-item index="/operations/substitutions"><el-icon><UserFilled /></el-icon><span>代班调度</span></el-menu-item>
           <el-menu-item index="/operations/delivery-demands"><el-icon><Operation /></el-icon><span>配送需求</span></el-menu-item>
         </el-sub-menu>
 
@@ -72,6 +75,7 @@ const activeMenu = computed(() => {
           <template #title><el-icon><DataAnalysis /></el-icon><span>派车中心</span></template>
           <el-menu-item index="/dispatch/auto"><el-icon><Van /></el-icon><span>自动派车</span></el-menu-item>
           <el-menu-item index="/dispatch/plans"><el-icon><Tickets /></el-icon><span>方案列表</span></el-menu-item>
+          <el-menu-item index="/dispatch/quality"><el-icon><DataAnalysis /></el-icon><span>调度质量报告</span></el-menu-item>
           <el-menu-item index="/dispatch/exceptions"><el-icon><DocumentChecked /></el-icon><span>每日异常</span></el-menu-item>
         </el-sub-menu>
 

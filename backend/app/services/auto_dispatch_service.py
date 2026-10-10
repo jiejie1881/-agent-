@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from dataclasses import replace
 from sqlalchemy.exc import IntegrityError
+import logging
 
 from app.dispatch_engine.dispatch_engine import DispatchEngine
 from app.domain.enums import DeliveryDemandStatus, DispatchPlanStatus, DeliveryPeriod
@@ -99,6 +100,15 @@ class AutoDispatchService:
                     "unassigned_demand_count": len(result.unassigned_demands),
                 },
             )
+            from app.services.dispatch_quality_service import DispatchQualityService, freeze_scope
+            quality_warning = None
+            # 评分是附加报告，不允许失败回滚已合法生成的派车；独立保存点隔离。
+            try:
+                with self.session.begin_nested():
+                    DispatchQualityService(self.session).generate(plan.id, actor, freeze_scope(engine_input.demands), commit=False)
+            except Exception:
+                quality_warning = '方案已保存，但质量报告生成失败，请到质量报告页面重试'
+                logging.getLogger(__name__).warning('QUALITY_REPORT_FAILED plan_id=%s', plan.id)
             self.session.commit()
         except BusinessError:
             self.session.rollback()
@@ -108,6 +118,7 @@ class AutoDispatchService:
             raise ConflictError("派车方案版本生成冲突，请重新生成") from exc
         return AutoDispatchResponse(
             plan_id=plan.id,
+            quality_warning=quality_warning,
             date=result.dispatch_date,
             version=plan.version,
             status=plan.status,

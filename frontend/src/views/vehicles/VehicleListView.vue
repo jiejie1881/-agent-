@@ -9,24 +9,39 @@ import { useAuthStore } from '@/stores/auth'
 import type { Vehicle, VehiclePayload, VehicleType } from '@/types/vehicle'
 import type { AuthUser } from '@/types/auth'
 import VehicleFormDialog from '@/views/vehicles/components/VehicleFormDialog.vue'
+import { fetchEnterpriseOverview, type EnterpriseOverview } from '@/api/enterprise'
+import { typeLabel } from '@/utils/businessLabels'
 
 const authStore = useAuthStore()
 const loading = ref(false), submitting = ref(false), dialogVisible = ref(false)
 const vehicles = ref<Vehicle[]>([]), vehicleTypes = ref<VehicleType[]>([]), editing = ref<Vehicle | null>(null), keyword = ref('')
 const drivers = ref<AuthUser[]>([])
+const day = ref(new Date().toLocaleDateString('sv-SE')), enterprise = ref<EnterpriseOverview | null>(null), statusError = ref('')
+let requestVersion = 0
+const operational = (id: number) => enterprise.value?.vehicles.find(v => v.id === id)
+async function allPages<T>(fetchPage: (params: {offset: number; limit: number}) => Promise<{data: T[]}>) {
+  const rows: T[] = []
+  for (let offset = 0; ; offset += 100) { const {data} = await fetchPage({offset,limit:100}); rows.push(...data); if (data.length < 100) return rows }
+}
 const selectedTypeId = ref<number | null>(null)
 const filtered = computed(() => {
   const value = keyword.value.trim().toLowerCase()
-  return vehicles.value.filter((item) => (!selectedTypeId.value || item.vehicle_type_id === selectedTypeId.value) && (!value || `${item.code} ${item.plate_number} ${item.vehicle_type.name}`.toLowerCase().includes(value)))
+  return vehicles.value.filter((item) => (!selectedTypeId.value || item.vehicle_type_id === selectedTypeId.value) && (!value || `${item.code} ${item.plate_number} ${typeLabel(item.vehicle_type.code,item.vehicle_type.name)} ${operational(item.id)?.default_driver?.name ?? ''}`.toLowerCase().includes(value)))
 })
 async function loadData() {
   loading.value = true
+  const version = ++requestVersion
+  enterprise.value = null; statusError.value = ''
   try {
-    const [vehicleResponse, typeResponse] = await Promise.all([listVehicles({ offset: 0, limit: 100 }), listVehicleTypes({ offset: 0, limit: 100 })])
-    vehicles.value = vehicleResponse.data
-    vehicleTypes.value = typeResponse.data
+    const [vehicleRows, typeRows] = await Promise.all([allPages<Vehicle>(listVehicles), allPages<VehicleType>(listVehicleTypes)])
+    if (version !== requestVersion) return
+    vehicles.value = vehicleRows
+    vehicleTypes.value = typeRows
+    try { const {data} = await fetchEnterpriseOverview(day.value); if (version === requestVersion) enterprise.value = data }
+    catch { if (version === requestVersion) statusError.value = '当日运营状态加载失败，可重试；基础资料仍可查看。' }
     if (authStore.canManageMasterData) drivers.value = (await listUsers()).data.filter((item) => item.role === 'DRIVER')
-  } catch {} finally { loading.value = false }
+  } catch (e) { if (version === requestVersion) statusError.value = e && typeof e === 'object' && 'message' in e ? String(e.message) : '车辆资料加载失败，请刷新重试' }
+  finally { if (version === requestVersion) loading.value = false }
 }
 function openCreate() { editing.value = null; dialogVisible.value = true }
 function openEdit(item: Vehicle) { editing.value = item; dialogVisible.value = true }
@@ -45,13 +60,17 @@ onMounted(loadData)
   <section class="master-page">
     <div class="page-heading"><div><p class="eyebrow">基础资料</p><h1>车辆管理</h1><p>维护车辆、所属车型和启用状态。</p></div><el-button v-if="authStore.canManageMasterData" type="primary" :icon="Plus" :disabled="!vehicleTypes.length" @click="openCreate">新增车辆</el-button></div>
     <el-card class="table-card" shadow="never">
+      <el-alert v-if="statusError" :title="statusError" type="error" :closable="false" />
+      <p>运营日期：<el-date-picker v-model="day" value-format="YYYY-MM-DD" :clearable="false" @change="loadData" />　载重单位 kg；当日线路来自已发布任务，不代表车辆固定归属。</p>
       <div class="toolbar"><div class="filters"><el-input v-model="keyword" :prefix-icon="Search" clearable placeholder="搜索车辆编码、车牌号或车型" /><el-select v-model="selectedTypeId" clearable placeholder="全部车型"><el-option v-for="item in vehicleTypes" :key="item.id" :label="item.name" :value="item.id" /></el-select></div><el-button :icon="Refresh" :loading="loading" @click="loadData">刷新</el-button></div>
       <el-table v-loading="loading" :data="filtered" row-key="id" stripe>
         <template #empty><el-empty description="暂无车辆数据" :image-size="92" /></template>
         <el-table-column label="车辆" min-width="190"><template #default="{ row }"><strong>{{ row.plate_number }}</strong><div class="code">{{ row.code }}</div></template></el-table-column>
-        <el-table-column label="车型" min-width="210"><template #default="{ row }"><div>{{ row.vehicle_type.name }}</div><div class="code">{{ row.vehicle_type.code }}</div></template></el-table-column>
+        <el-table-column label="车型" min-width="210"><template #default="{ row }"><div>{{ typeLabel(row.vehicle_type.code,row.vehicle_type.name) }}</div><div class="code">{{ row.vehicle_type.code }}</div></template></el-table-column>
         <el-table-column label="载重范围" min-width="190" align="center"><template #default="{ row }">{{ Number(row.vehicle_type.min_load).toFixed(2) }} ～ {{ Number(row.vehicle_type.max_load).toFixed(2) }}</template></el-table-column>
-        <el-table-column label="绑定司机" min-width="150"><template #default="{ row }">{{ drivers.find((item) => item.id === row.driver_user_id)?.username ?? '未绑定' }}</template></el-table-column>
+        <el-table-column label="常驻司机" min-width="150"><template #default="{ row }">{{ operational(row.id)?.default_driver?.name ?? (row.driver_user_id ? '资料未加载' : '未绑定') }}<div class="code">{{ operational(row.id)?.default_driver?.employee_code }}</div></template></el-table-column>
+        <el-table-column label="当日出勤 / 可调度条件" min-width="230"><template #default="{row}">{{ !operational(row.id) ? '资料未加载' : operational(row.id)?.attendance === true ? '出勤' : operational(row.id)?.attendance === false ? '不出勤' : '未登记' }}<div v-for="p in ['MORNING','AFTERNOON']" :key="p">{{ p === 'MORNING' ? '上午' : '下午' }}：{{ operational(row.id)?.shifts[p]?.driver?.name ?? (operational(row.id) ? '无有效司机' : '资料未加载') }}<el-tag :type="operational(row.id)?.shifts[p]?.availability_status === 'AVAILABLE' ? 'success' : 'info'">{{ operational(row.id)?.shifts[p]?.availability_status === 'AVAILABLE' ? '司机/出勤就绪' : operational(row.id)?.shifts[p]?.unavailable_reason ?? '未加载' }}</el-tag></div></template></el-table-column>
+        <el-table-column label="已发布任务 / 当前执行" min-width="230"><template #default="{row}"><div v-for="t in operational(row.id)?.tasks" :key="t.id"><router-link :to="`/dispatch/plans/${t.plan_id}`">{{ t.code }}</router-link> · {{ t.status === 'DELIVERING' ? '配送中' : t.status === 'COMPLETED' ? '已完成' : '待开始' }}<div>{{ t.route_name }} · {{ t.total_load }} kg · {{ t.driver?.name ?? '司机未记录' }}</div></div><span v-if="!operational(row.id)?.tasks.length">{{ operational(row.id) ? '暂无已发布任务' : '任务资料未加载' }}</span></template></el-table-column>
         <el-table-column label="状态" width="100" align="center"><template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '启用' : '停用' }}</el-tag></template></el-table-column>
         <el-table-column v-if="authStore.canManageMasterData" label="操作" width="150" align="center" fixed="right"><template #default="{ row }"><el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button><el-button link type="danger" @click="remove(row)">删除</el-button></template></el-table-column>
       </el-table><div class="summary">共 {{ filtered.length }} 条车辆数据</div>
