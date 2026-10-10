@@ -1,5 +1,11 @@
 # 数据库结构差异基线与技术债
 
+## 2026-10-10 P0 修复复核
+
+此前 `alembic check` FAIL 的事实保留在下文。发布修复将 ORM 元数据对齐已经执行的历史 DDL：需求 status/priority 明确 VARCHAR(20)；terrain/route/store/vehicle type/vehicle 业务编码使用独立唯一约束与普通索引；users 保留 migration 010 中的命名唯一约束和唯一索引。
+
+这不是删除约束或忽略比较，也没有修改历史 migration、数据或新增 migration。新增测试从空 SQLite 库实际 upgrade 到 head 后执行 `alembic check`，通过并检查唯一约束；实际 MySQL（当前 Demo 容器）upgrade/current/heads/check 也通过，head 仍为 `20261010_24`，输出 `No new upgrade operations detected.`。用户名的冗余唯一索引/约束暂保留，未来优化需另行迁移。
+
 审查日期：2026-10-10。范围：稳定版 `b3f70e9` 的既有迁移定义，以及待提交 Migration 19～23。
 
 ## 当前结论

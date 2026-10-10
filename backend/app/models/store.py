@@ -9,9 +9,10 @@ from app.models.mixins import TimestampMixin
 
 class Store(TimestampMixin, Base):
     __tablename__ = "stores"
+    __table_args__ = (UniqueConstraint("code"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    code: Mapped[str] = mapped_column(String(50), index=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     contact_name: Mapped[str | None] = mapped_column(String(100), nullable=True)

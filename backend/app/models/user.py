@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Enum, String
+from sqlalchemy import Boolean, Enum, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.enums import UserRole
@@ -8,6 +8,8 @@ from app.models.mixins import TimestampMixin
 
 class User(TimestampMixin, Base):
     __tablename__ = "users"
+    # Migration 010 deliberately contains both this constraint and a unique index.
+    __table_args__ = (UniqueConstraint("username", name="uq_users_username"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String(100), unique=True, index=True)

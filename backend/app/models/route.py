@@ -9,9 +9,10 @@ from app.models.mixins import TimestampMixin
 
 class Route(TimestampMixin, Base):
     __tablename__ = "routes"
+    __table_args__ = (UniqueConstraint("code"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    code: Mapped[str] = mapped_column(String(50), index=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

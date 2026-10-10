@@ -10,6 +10,7 @@ from app.domain.enums import VehicleTypeCode
 
 class VehicleType(TimestampMixin, Base):
     __tablename__ = "vehicle_types"
+    __table_args__ = (UniqueConstraint("code"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[VehicleTypeCode] = mapped_column(
@@ -20,7 +21,6 @@ class VehicleType(TimestampMixin, Base):
             validate_strings=True,
             name="vehicle_type_code",
         ),
-        unique=True,
         index=True,
     )
     name: Mapped[str] = mapped_column(String(100), unique=True)
@@ -36,10 +36,11 @@ class VehicleType(TimestampMixin, Base):
 
 class Vehicle(TimestampMixin, Base):
     __tablename__ = "vehicles"
+    __table_args__ = (UniqueConstraint("code"), UniqueConstraint("plate_number"))
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
-    plate_number: Mapped[str] = mapped_column(String(20), unique=True, index=True)
+    code: Mapped[str] = mapped_column(String(50), index=True)
+    plate_number: Mapped[str] = mapped_column(String(20), index=True)
     vehicle_type_id: Mapped[int] = mapped_column(
         ForeignKey("vehicle_types.id", ondelete="RESTRICT"), index=True
     )
