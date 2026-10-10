@@ -228,7 +228,7 @@ CANCEL_DISPATCH_PLAN_DEFINITION = AgentToolDefinition(
 SEARCH_KNOWLEDGE_BASE_DEFINITION = AgentToolDefinition(
     name="search_knowledge_base",
     description=(
-        "查询企业物流知识库，适用于派车规则、冷链要求、货物运输要求、"
+        "查询企业物流知识库，适用于派车规则、系统能力边界、配送操作规范、"
         "异常处理和系统操作说明。返回可核验的文档来源和章节。"
         "不得用于查询当日配送需求、车辆出勤、派车方案等实时数据。"
     ),

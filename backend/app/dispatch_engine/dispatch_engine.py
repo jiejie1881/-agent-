@@ -46,7 +46,6 @@ class DispatchEngine:
                 routes=engine_input.routes,
                 store_route_ids=engine_input.store_route_ids,
                 permissions=engine_input.permissions,
-                cargo_capabilities=engine_input.cargo_capabilities,
                 trip_counts=trip_counts,
                 vehicle_trip_counts=vehicle_trip_counts,
             )
@@ -67,7 +66,6 @@ class DispatchEngine:
         routes: dict[int, EngineRoute],
         store_route_ids: dict[int, set[int]],
         permissions: set[tuple[int, int]],
-        cargo_capabilities,
         trip_counts: Counter[tuple[DeliveryPeriod, VehicleTypeCode]],
         vehicle_trip_counts: Counter[tuple[int, DeliveryPeriod]],
     ) -> tuple[list[TripPlan], list[UnassignedDemand]]:
@@ -78,7 +76,6 @@ class DispatchEngine:
             store_route_ids=store_route_ids,
             permissions=permissions,
             period=period,
-            cargo_capabilities=cargo_capabilities,
         )
         options = {
             (option.demand_id, option.vehicle_id, option.route_id)

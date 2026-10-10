@@ -6,6 +6,7 @@ from app.models.mixins import TimestampMixin
 
 
 class CargoCategory(TimestampMixin, Base):
+    """Archive-only mapping retained for historical FKs; no current business API."""
     __tablename__ = "cargo_categories"
 
     id: Mapped[int] = mapped_column(primary_key=True)

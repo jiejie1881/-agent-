@@ -7,17 +7,14 @@ import { createVehicleType, deleteVehicleType, listVehicleTypes, updateVehicleTy
 import { useAuthStore } from '@/stores/auth'
 import type { VehicleType, VehicleTypePayload } from '@/types/vehicle'
 import VehicleTypeFormDialog from '@/views/vehicle-types/components/VehicleTypeFormDialog.vue'
-import CargoCapabilityDialog from '@/views/vehicle-types/components/CargoCapabilityDialog.vue'
 
 const authStore = useAuthStore()
 const loading = ref(false), submitting = ref(false), dialogVisible = ref(false)
 const items = ref<VehicleType[]>([]), editing = ref<VehicleType | null>(null), keyword = ref('')
-const capabilityVisible = ref(false), capabilityVehicleType = ref<VehicleType | null>(null)
 const filtered = computed(() => { const value = keyword.value.trim().toLowerCase(); return value ? items.value.filter((item) => `${item.code} ${item.name}`.toLowerCase().includes(value)) : items.value })
 async function loadData() { loading.value = true; try { items.value = (await listVehicleTypes({ offset: 0, limit: 100 })).data } catch {} finally { loading.value = false } }
 function openCreate() { editing.value = null; dialogVisible.value = true }
 function openEdit(item: VehicleType) { editing.value = item; dialogVisible.value = true }
-function openCapabilities(item: VehicleType) { capabilityVehicleType.value = item; capabilityVisible.value = true }
 async function submit(payload: VehicleTypePayload) {
   submitting.value = true
   try { if (editing.value) { await updateVehicleType(editing.value.id, payload); ElMessage.success('车型修改成功') } else { await createVehicleType(payload); ElMessage.success('车型新增成功') }; dialogVisible.value = false; await loadData() } catch {} finally { submitting.value = false }
@@ -40,11 +37,10 @@ onMounted(loadData)
         <el-table-column label="最低载重" min-width="150" align="right"><template #default="{ row }"><strong>{{ Number(row.min_load).toFixed(2) }}</strong></template></el-table-column>
         <el-table-column label="最高载重" min-width="150" align="right"><template #default="{ row }"><strong>{{ Number(row.max_load).toFixed(2) }}</strong></template></el-table-column>
         <el-table-column label="状态" width="100" align="center"><template #default="{ row }"><el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? '启用' : '停用' }}</el-tag></template></el-table-column>
-        <el-table-column v-if="authStore.canManageMasterData" label="操作" width="230" align="center" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openCapabilities(row)">运输能力</el-button><el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button><el-button link type="danger" @click="remove(row)">删除</el-button></template></el-table-column>
+        <el-table-column v-if="authStore.canManageMasterData" label="操作" width="230" align="center" fixed="right"><template #default="{ row }"><el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button><el-button link type="danger" @click="remove(row)">删除</el-button></template></el-table-column>
       </el-table><div class="summary">共 {{ filtered.length }} 条车型数据</div>
     </el-card>
     <VehicleTypeFormDialog v-if="authStore.canManageMasterData" v-model="dialogVisible" :vehicle-type="editing" :submitting="submitting" @submit="submit" />
-    <CargoCapabilityDialog v-if="authStore.canManageMasterData" v-model="capabilityVisible" :vehicle-type="capabilityVehicleType" />
   </section>
 </template>
 

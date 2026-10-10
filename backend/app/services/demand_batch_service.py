@@ -18,7 +18,7 @@ class DemandBatchService:
         if actor.role != UserRole.ADMIN:
             raise PermissionDeniedError("AI批量确认仅允许管理员")
         if not data.confirmed:
-            raise BusinessError("请先确认所有字段与温控要求", 422, "AI_DEMAND_CONFIRM_REQUIRED")
+            raise BusinessError("请先确认所有配送字段", 422, "AI_DEMAND_CONFIRM_REQUIRED")
         key = str(data.request_key)
         digest = hashlib.sha256(json.dumps([i.model_dump(mode='json') for i in data.items], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         def replay(receipt):

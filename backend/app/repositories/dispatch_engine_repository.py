@@ -16,7 +16,7 @@ from app.models.dispatch_plan import DispatchOrder, DispatchOrderDetail, Dispatc
 from app.models.route import Route, RouteTerrainConfig
 from app.models.store import StoreRoute
 from app.models.vehicle import (
-    Vehicle, VehicleType, VehicleTypeCargoCapability,
+    Vehicle, VehicleType,
     VehicleTypeTerrainPermission,
 )
 from app.models.vehicle_attendance import VehicleAttendance
@@ -40,10 +40,6 @@ class DispatchEngineRepository:
             {vehicle.vehicle_type_id for vehicle in vehicles},
             {route.terrain_id for route in routes.values()},
         )
-        cargo_capabilities = self._load_cargo_capabilities(
-            {vehicle.vehicle_type_id for vehicle in vehicles},
-            {demand.cargo_category_id for demand in demands},
-        )
         return DispatchEngineInput(
             dispatch_date=dispatch_date,
             demands=tuple(demands),
@@ -51,7 +47,6 @@ class DispatchEngineRepository:
             routes=routes,
             store_route_ids=store_route_ids,
             permissions=permissions,
-            cargo_capabilities=cargo_capabilities,
         )
 
     def _load_demands(self, dispatch_date: date) -> list[EngineDemand]:
@@ -73,7 +68,6 @@ class DispatchEngineRepository:
             select(DeliveryDemand)
             .options(
                 joinedload(DeliveryDemand.store),
-                joinedload(DeliveryDemand.cargo_category),
             )
             .where(
                 DeliveryDemand.date == dispatch_date,
@@ -96,13 +90,7 @@ class DispatchEngineRepository:
                 store_name=demand.store.name,
                 period=demand.period,
                 quantity=demand.quantity,
-                cargo_category_id=demand.cargo_category_id,
-                cargo_category_code=demand.cargo_category.code,
-                cargo_category_name=demand.cargo_category.name,
                 priority=demand.priority,
-                requires_temperature_control=demand.requires_temperature_control,
-                min_temperature=demand.min_temperature,
-                max_temperature=demand.max_temperature,
             )
             for demand in self.session.scalars(statement)
         ]
@@ -189,20 +177,4 @@ class DispatchEngineRepository:
         return {
             (permission.vehicle_type_id, permission.terrain_id)
             for permission in self.session.scalars(statement)
-        }
-
-    def _load_cargo_capabilities(
-        self, vehicle_type_ids: set[int], cargo_category_ids: set[int]
-    ) -> dict[tuple[int, int], tuple[bool, object, object]]:
-        if not vehicle_type_ids or not cargo_category_ids:
-            return {}
-        statement = select(VehicleTypeCargoCapability).where(
-            VehicleTypeCargoCapability.vehicle_type_id.in_(vehicle_type_ids),
-            VehicleTypeCargoCapability.cargo_category_id.in_(cargo_category_ids),
-        )
-        return {
-            (item.vehicle_type_id, item.cargo_category_id): (
-                item.is_allowed, item.min_temperature, item.max_temperature
-            )
-            for item in self.session.scalars(statement)
         }

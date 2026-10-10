@@ -1,4 +1,4 @@
-import type { DemandPreview, AIDemandPayload } from '@/types/ai-operations'
+import type { DemandPreview } from '@/types/ai-operations'
 import type { DeliveryDemandPayload } from '@/types/delivery-demand'
 
 export function manualPreview(date: string): DemandPreview {
@@ -12,8 +12,8 @@ export function previewErrors(row: DemandPreview): string[] {
   if (d.quantity === null || !Number.isFinite(Number(d.quantity)) || Number(d.quantity) <= 0 || Number(d.quantity) >= 1e10 || !/^\d+(\.\d{1,2})?$/.test(String(d.quantity))) errors.push('请填写正数kg货量（最多两位小数）')
   return errors
 }
-export function previewPayload(row: DemandPreview): AIDemandPayload {
+export function previewPayload(row: DemandPreview): DeliveryDemandPayload {
   const d = row.data
   if (previewErrors(row).length) throw new Error('请补齐预览字段')
-  return { date: d.date!, store_id: d.store_id!, period: d.period as DeliveryDemandPayload['period'], quantity: Number(d.quantity), priority: d.priority, cargo_category_id: d.cargo_category_id, requires_temperature_control: d.requires_temperature_control, min_temperature: d.min_temperature, max_temperature: d.max_temperature }
+  return { date: d.date!, store_id: d.store_id!, period: d.period as DeliveryDemandPayload['period'], quantity: Number(d.quantity), priority: d.priority }
 }

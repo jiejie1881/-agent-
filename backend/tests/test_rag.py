@@ -111,6 +111,21 @@ def test_chroma_rebuild_and_search_returns_real_source(tmp_path: Path) -> None:
     assert service.status().ready is True
 
 
+def test_retired_transport_index_does_not_return_obsolete_rules(tmp_path: Path) -> None:
+    knowledge = tmp_path / "knowledge"
+    knowledge.mkdir()
+    source = knowledge / "cold_chain_rules.md"
+    source.write_text("# 冷链\n冷冻货物必须进行温控匹配。", encoding="utf-8")
+    service = build_service(tmp_path, knowledge)
+    service.rebuild()
+    assert service.search("冷冻", top_k=1)
+    source.write_text("# 当前能力\n分类和温控已停用，需要人工核实特殊要求。", encoding="utf-8")
+    assert service.search("冷冻", top_k=1) == []
+    assert service.status().ready  # Preserve the index, don't erase unrelated knowledge.
+    service.rebuild()
+    assert "已停用" in service.search("温控", top_k=1)[0].content
+
+
 def test_document_type_filter_and_no_results(tmp_path: Path) -> None:
     knowledge = tmp_path / "knowledge"
     knowledge.mkdir()

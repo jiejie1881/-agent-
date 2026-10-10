@@ -14,7 +14,7 @@ from app.services.dispatch_quality_metrics_service import DispatchQualityMetrics
 from app.services.dispatch_quality_engine import RULE_VERSION, score_quality
 from app.services.audit_log_service import AuditLogService
 
-SCOPE_FIELDS = ('id', 'date', 'store_id', 'period', 'quantity', 'cargo_category_id', 'priority', 'requires_temperature_control', 'min_temperature', 'max_temperature')
+SCOPE_FIELDS = ('id', 'date', 'store_id', 'period', 'quantity', 'priority')
 def freeze_scope(demands):
     return sorted([jsonable_encoder({key: getattr(d, key) for key in SCOPE_FIELDS}) for d in demands], key=lambda d: d['id'])
 
@@ -38,6 +38,8 @@ class DispatchQualityService:
                 represented = {d.delivery_demand_id for o in plan.orders for d in o.details} | {d.delivery_demand_id for d in plan.unassigned_demands}
                 scope = freeze_scope(self.repository.demands(represented))
                 origin = 'LEGACY_RECONSTRUCTED'
+        # Ignore retired fields in old input snapshots without rewriting historical reports.
+        scope = [{key: item[key] for key in SCOPE_FIELDS if key in item} for item in scope]
         # Report never changes demand/plan state; check current data, freeze the resulting facts.
         issues = DispatchPlanPublicationValidator(DispatchValidationService(self.session)).validate(plan, for_update=False)
         metrics, trips, unassigned, exceptions, traces, categorized, groups = DispatchQualityMetricsService(self.session).collect(plan, scope, issues)

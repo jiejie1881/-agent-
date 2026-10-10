@@ -22,8 +22,6 @@ class ExtractedDemand(BaseModel):
     period_text: str | None = Field(default=None, max_length=30)
     quantity_text: str | None = Field(default=None, max_length=30)
     unit_text: str | None = Field(default=None, max_length=20)
-    cargo_text: str | None = Field(default=None, max_length=100)
-    temperature_text: str | None = Field(default=None, max_length=100)
     priority_text: str | None = Field(default=None, max_length=30)
     remark_text: str | None = Field(default=None, max_length=500)
 

@@ -15,13 +15,7 @@ class EngineDemand:
     store_name: str
     period: DeliveryPeriod
     quantity: Decimal
-    cargo_category_id: int = 0
-    cargo_category_code: str = "NORMAL"
-    cargo_category_name: str = "NORMAL"
     priority: DeliveryPriority = DeliveryPriority.NORMAL
-    requires_temperature_control: bool = False
-    min_temperature: Decimal | None = None
-    max_temperature: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -95,6 +89,3 @@ class DispatchEngineInput:
     routes: dict[int, EngineRoute]
     store_route_ids: dict[int, set[int]]
     permissions: set[tuple[int, int]]
-    cargo_capabilities: dict[
-        tuple[int, int], tuple[bool, Decimal | None, Decimal | None]
-    ] = field(default_factory=dict)

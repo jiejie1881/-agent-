@@ -10,11 +10,10 @@ from app.infrastructure.database.session import SessionLocal
 from app.domain.enums import UserRole, VehicleTypeCode, DeliveryPeriod
 from app.domain.exceptions import ConflictError
 from app.models.user import User
-from app.models.vehicle import Vehicle, VehicleType, VehicleTypeCargoCapability
+from app.models.vehicle import Vehicle, VehicleType
 from app.models.store import Store, StoreRoute
 from app.models.route import Route, RouteTerrainConfig
 from app.models.terrain import Terrain
-from app.models.cargo_category import CargoCategory
 from app.models.delivery_demand import DeliveryDemand
 from app.models.vehicle_attendance import VehicleAttendance
 from app.models.dispatch_plan import DispatchPlan
@@ -57,11 +56,8 @@ def validate_target(url, local_demo, expected_database):
 def seed_enterprise_demo(session, day, password, *, local_demo=False, prepare_history=False):
     if not local_demo or len(password) < 8:
         raise ValueError('仅允许显式本地Demo；初始密码至少8位，不重置已有账号')
-    # Shared enum/load/cargo configuration is an existing business dependency, not seed-owned.
+    # Shared enum/load configuration is an existing business dependency, not seed-owned.
     types = {v.code: v for v in session.scalars(select(VehicleType))}
-    category = session.scalar(select(CargoCategory).where(CargoCategory.code == 'NORMAL'))
-    if not category or not category.is_active:
-        raise ConflictError('请先通过正常基础资料配置启用NORMAL货物分类')
     if any(not v.is_active for v in types.values()):
         raise ConflictError('现有车型已停用；Seed不会自动启用或覆盖配置')
     # Refuse a mixed-date scenario before creating plans or altering attendance.
@@ -78,10 +74,6 @@ def seed_enterprise_demo(session, day, password, *, local_demo=False, prepare_hi
     for code, label, minimum, maximum in ((VehicleTypeCode.FOUR_METER,'4.2米厢式货车',630,800), (VehicleTypeCode.BIG_VAN,'大型面包车',300,420), (VehicleTypeCode.SMALL_VAN,'小型面包车',1,300)):
         if code not in types:
             types[code] = VehicleTypeService(session).create(VehicleTypeCreate(code=code,name=label,min_load=minimum,max_load=maximum))
-            # VehicleTypeService initializes normal-cargo capability for new types.
-        capability = session.scalar(select(VehicleTypeCargoCapability).where(VehicleTypeCargoCapability.vehicle_type_id == types[code].id, VehicleTypeCargoCapability.cargo_category_id == category.id))
-        if not capability or not capability.is_allowed:
-            raise ConflictError('现有车型缺少常温运输能力；请人工配置，Seed不覆盖共享能力')
     users = []
     for username, role in (('enterprise_admin',UserRole.ADMIN), ('enterprise_dispatcher',UserRole.DISPATCHER), ('enterprise_viewer',UserRole.VIEWER)):
         existing = session.scalar(select(User).where(User.username == username))
@@ -156,7 +148,7 @@ def seed_enterprise_demo(session, day, password, *, local_demo=False, prepare_hi
         raise ConflictError('既有演示请假/代班已变化，Seed保持不变，请管理员核查')
     for i, quantity in enumerate((700,700,350,350,60,60,120)):
         if not session.scalar(select(DeliveryDemand).where(DeliveryDemand.date == day,DeliveryDemand.store_id == stores[i].id,DeliveryDemand.period == DeliveryPeriod.MORNING)):
-            DeliveryDemandService(session).create(DeliveryDemandCreate(date=day,store_id=stores[i].id,period='MORNING',quantity=quantity,cargo_category_id=category.id),actor)
+            DeliveryDemandService(session).create(DeliveryDemandCreate(date=day,store_id=stores[i].id,period='MORNING',quantity=quantity),actor)
     plans = list(session.scalars(select(DispatchPlan).where(DispatchPlan.delivery_date == day).order_by(DispatchPlan.version)))
     if not plans:
         AutoDispatchService(session).dispatch(AutoDispatchRequest(date=day),actor)
@@ -167,7 +159,7 @@ def seed_enterprise_demo(session, day, password, *, local_demo=False, prepare_hi
         if not existing_plan:
             for store in stores[:2]:
                 if not session.scalar(select(DeliveryDemand).where(DeliveryDemand.date == history_day,DeliveryDemand.store_id == store.id,DeliveryDemand.period == DeliveryPeriod.MORNING)):
-                    DeliveryDemandService(session).create(DeliveryDemandCreate(date=history_day,store_id=store.id,period='MORNING',quantity=50,cargo_category_id=category.id),actor)
+                    DeliveryDemandService(session).create(DeliveryDemandCreate(date=history_day,store_id=store.id,period='MORNING',quantity=50),actor)
             result = AutoDispatchService(session).dispatch(AutoDispatchRequest(date=history_day),actor)
             plan = DispatchPlanService(session).publish(result.plan_id,actor)
             for order in plan.orders:

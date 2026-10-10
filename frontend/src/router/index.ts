@@ -16,7 +16,6 @@ import { useAuthStore } from '@/stores/auth'
 import UserListView from '@/views/users/UserListView.vue'
 import AuditLogListView from '@/views/audit-logs/AuditLogListView.vue'
 import AgentChatView from '@/views/agent/AgentChatView.vue'
-import CargoCategoryListView from '@/views/cargo-categories/CargoCategoryListView.vue'
 import DailyExceptionView from '@/views/dispatch/DailyExceptionView.vue'
 
 const children: RouteRecordRaw[] = [
@@ -24,12 +23,6 @@ const children: RouteRecordRaw[] = [
   { path: 'operations/leave-approval', component: () => import('@/views/drivers/DriverLeaveView.vue'), meta: { title: '请假审批', group: '每日运营' } },
   { path: 'operations/substitutions', component: () => import('@/views/drivers/DriverLeaveView.vue'), props: { mode: 'substitution' }, meta: { title: '代班调度', group: '每日运营' } },
   { path: 'operations/drivers', name: 'driver-scheduling', component: () => import('@/views/drivers/DriverSchedulingView.vue'), meta: { title: '司机与排班', group: '每日运营' } },
-  {
-    path: 'master/cargo-categories',
-    name: 'cargo-categories',
-    component: CargoCategoryListView,
-    meta: { title: '货物分类管理', group: '基础资料' },
-  },
   {
     path: 'master/terrains',
     name: 'terrains',

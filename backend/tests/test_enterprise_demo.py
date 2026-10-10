@@ -7,7 +7,6 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.store import Store
 from app.models.delivery_demand import DeliveryDemand
-from app.models.cargo_category import CargoCategory
 from app.models.dispatch_plan import DispatchPlan, DispatchOrderDetail
 from app.models.driver_scheduling import DriverSubstitution
 from app.models.ai_operations import DispatchQualityReport
@@ -40,8 +39,7 @@ def test_seed_requires_opt_in_and_password(session):
 
 def test_foreign_date_is_rejected_before_any_write(session):
     store = Store(code='MANUAL', name='人工门店'); session.add(store); session.flush()
-    category = session.scalar(select(CargoCategory).where(CargoCategory.code == 'NORMAL'))
-    session.add(DeliveryDemand(date=DAY, store_id=store.id, period='MORNING', quantity=10, cargo_category_id=category.id)); session.commit()
+    session.add(DeliveryDemand(date=DAY, store_id=store.id, period='MORNING', quantity=10)); session.commit()
     with pytest.raises(ConflictError): seed(session)
     assert session.scalar(select(func.count()).select_from(User)) == 0
     assert session.scalar(select(func.count()).select_from(Vehicle)) == 0

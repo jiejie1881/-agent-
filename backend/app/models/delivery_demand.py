@@ -43,8 +43,9 @@ class DeliveryDemand(TimestampMixin, Base):
         index=True,
     )
     quantity: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    cargo_category_id: Mapped[int] = mapped_column(
-        ForeignKey("cargo_categories.id", ondelete="RESTRICT"), index=True
+    # Archive-only field: existing category references are retained, new demands use NULL.
+    cargo_category_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cargo_categories.id", ondelete="RESTRICT"), index=True, nullable=True
     )
     priority: Mapped[DeliveryPriority] = mapped_column(
         Enum(
@@ -77,7 +78,7 @@ class DeliveryDemand(TimestampMixin, Base):
     )
 
     store: Mapped["Store"] = relationship()
-    cargo_category: Mapped["CargoCategory"] = relationship(back_populates="demands")
+    cargo_category: Mapped["CargoCategory | None"] = relationship(back_populates="demands")
 
     @property
     def core_fields_editable(self) -> bool:

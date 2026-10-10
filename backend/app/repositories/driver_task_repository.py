@@ -76,9 +76,6 @@ class DriverTaskRepository:
                 selectinload(DispatchOrder.details)
                 .joinedload(DispatchOrderDetail.delivery_demand)
                 .joinedload(DeliveryDemand.store),
-                selectinload(DispatchOrder.details)
-                .joinedload(DispatchOrderDetail.delivery_demand)
-                .joinedload(DeliveryDemand.cargo_category),
                 selectinload(DispatchOrder.details).selectinload(
                     DispatchOrderDetail.proofs
                 ).selectinload(DeliveryProof.reviews),

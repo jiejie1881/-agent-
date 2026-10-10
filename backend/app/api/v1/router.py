@@ -16,7 +16,6 @@ from app.api.v1.endpoints import (
     vehicles,
     users,
     audit_logs,
-    cargo_categories,
     daily_exceptions,
     driver_scheduling,
     driver_leave,
@@ -29,7 +28,6 @@ api_router = APIRouter(dependencies=[Depends(enforce_rbac)])
 api_router.include_router(agent.router)
 api_router.include_router(auto_dispatch.router)
 api_router.include_router(terrains.router)
-api_router.include_router(cargo_categories.router)
 api_router.include_router(routes.router)
 api_router.include_router(stores.router)
 api_router.include_router(vehicle_types.router)

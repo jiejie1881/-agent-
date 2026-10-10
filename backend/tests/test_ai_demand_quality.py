@@ -49,12 +49,12 @@ def parse(session, items, text):
 def test_multi_real_matching_and_units(session):
     session.add(Store(code='YL1', name='岳麓一店')); session.add(Store(code='HX2', name='河西二店')); session.commit()
     text = '下周一上午给岳麓一店送1吨常温货，下午给河西二店送180公斤冷冻货。'
-    items = [dict(source_text=text, date_text='下周一', period_text='上午', store_text='岳麓一店', quantity_text='1', unit_text='吨', cargo_text='常温货'), dict(source_text=text, date_text='下周一', period_text='下午', store_text='河西二店', quantity_text='180', unit_text='公斤', cargo_text='冷冻货')]
+    items = [dict(source_text=text, date_text='下周一', period_text='上午', store_text='岳麓一店', quantity_text='1', unit_text='吨'), dict(source_text=text, date_text='下周一', period_text='下午', store_text='河西二店', quantity_text='180', unit_text='公斤')]
     result, _ = parse(session, items, text)
     assert len(result['items']) == 2
     assert result['items'][0]['data']['quantity'] == '1000'
     assert result['items'][1]['data']['period'] == 'AFTERNOON'
-    assert result['items'][1]['data']['cargo_category_id'] is not None
+    assert 'cargo_category_id' not in result['items'][1]['data']
     assert result['items'][0]['data']['date'] == '2026-10-12'
     assert session.scalar(select(DeliveryDemand)) is None
 
@@ -73,7 +73,7 @@ def test_invalid_or_missing_quantity_needs_confirmation(session, quantity, unit)
     row = result['items'][0]
     assert row['data']['quantity'] is None
     assert 'period' in row['missing_fields']
-    assert row['sources']['cargo_category_id'] == 'SYSTEM_DEFAULT'
+    assert 'cargo_category_id' not in row['sources']
 
 def test_unknown_store_and_unfounded_model_fields(session):
     result, _ = parse(session, [dict(source_text='明天送500公斤', date_text='明天', store_text='模型虚构店', quantity_text='500', unit_text='公斤', period_text='下午')], '明天送500公斤')
@@ -82,13 +82,13 @@ def test_unknown_store_and_unfounded_model_fields(session):
     assert result['items'][0]['warnings']
 
 @pytest.mark.parametrize('temperature,required',[('常温货',False),('无需温控',False),('需要冷藏',True),('温度-20到-18度',True)])
-def test_temperature_semantics_not_arbitrary_model_field(session,temperature,required):
+def test_retired_transport_text_is_remark_only(session,temperature,required):
     text=f'明天上午送100公斤货物，{temperature}'
-    parsed,_=parse(session,[dict(source_text=text,date_text='明天',period_text='上午',quantity_text='100',unit_text='公斤',temperature_text=temperature)],text)
+    parsed,_=parse(session,[dict(source_text=text,date_text='明天',period_text='上午',quantity_text='100',unit_text='公斤',remark_text=temperature)],text)
     row=parsed['items'][0]
-    assert row['data']['requires_temperature_control']==required
-    if temperature=='需要冷藏': assert 'min_temperature' in row['missing_fields']
-    if temperature=='温度-20到-18度': assert row['data']['min_temperature']=='-20' and row['data']['max_temperature']=='-18'
+    assert 'requires_temperature_control' not in row['data']
+    assert 'min_temperature' not in row['missing_fields']
+    assert row['warnings']
 
 @pytest.mark.parametrize('response', ['not json', {'items':[{'source_text':'abc','store_id':999}]}, {'items':[]}])
 def test_bad_model_structures(session,response):
@@ -135,10 +135,10 @@ def metrics(**changes):
     return dict(valid_demand_count=10,valid_quantity=1000,assigned_demand_count=10,assigned_quantity=1000,trip_count=2,ready_trip_count=2,average_load_ratio=.8,unassigned_count=0,explained_unassigned_count=0,documented_failed_count=0,exception_case_count=0,**changes)
 
 def test_perfect_score_and_publication_independent():
-    m=metrics(); groups={'load','cargo','driver'}
+    m=metrics(); groups={'load','route','driver'}
     good=score_quality(m,[],groups,{'valid':True})
     assert good['total_score']==100 and good['grade']=='A' and good['rule_version']==RULE_VERSION
-    bad=score_quality(m,[{'category':'cargo'}],set(groups)|{'route','terrain','vehicle','data','period'}, {'valid':True})
+    bad=score_quality(m,[{'category':'route'}],set(groups)|{'route','terrain','vehicle','data','period'}, {'valid':True})
     assert bad['total_score']>90 # High numeric score still carries violation outside engine.
 
 @pytest.mark.parametrize('load,expected',[(0,0),(.4,7.5),(.8,15),(1.2,15)])
@@ -153,7 +153,7 @@ def test_unscorable(changes):
     report=score_quality(m,[],{'load'},{'valid':True},**options)
     assert report['total_score'] is None and report['grade'] is None
 
-@pytest.mark.parametrize('condition',['overload','route','cold','inactive','leave'])
+@pytest.mark.parametrize('condition',['overload','route','period','inactive','leave'])
 def test_reuses_publication_violations(client,session,condition):
     generated,plan,stores,kind,vehicles,terrain,route=generate_adjustable_plan(client,[240],1)
     order=session.get(DispatchOrder,plan['orders'][0]['id'])
@@ -161,8 +161,9 @@ def test_reuses_publication_violations(client,session,condition):
     elif condition=='route':
         from app.models.store import StoreRoute
         link=session.scalar(select(StoreRoute).where(StoreRoute.store_id==order.details[0].delivery_demand.store_id)); session.delete(link)
-    elif condition=='cold':
-        demand=order.details[0].delivery_demand; demand.requires_temperature_control=True; demand.min_temperature=-20; demand.max_temperature=-10
+    elif condition=='period':
+        from app.domain.enums import DeliveryPeriod
+        order.details[0].delivery_demand.period=DeliveryPeriod.AFTERNOON
     elif condition=='inactive': order.vehicle.is_active=False
     else:
         from app.models.driver_scheduling import DriverLeave
@@ -286,7 +287,7 @@ def test_complete_ai_entry_dispatch_adjust_score_publish_flow(client,session,mon
         assert client.post(f"/api/v1/stores/{store['id']}/routes",json={'route_id':route['id']}).status_code in (200,201)
         phrase=f'2026-09-24上午给{name}送{quantity}公斤常温货'
         phrases.append(phrase)
-        items.append(dict(source_text=phrase,date_text='2026-09-24',store_text=name,period_text='上午',quantity_text=str(quantity),unit_text='公斤',cargo_text='常温货'))
+        items.append(dict(source_text=phrase,date_text='2026-09-24',store_text=name,period_text='上午',quantity_text=str(quantity),unit_text='公斤'))
     model=Model({'items':items})
     monkeypatch.setattr(ai_operations,'DemandTextParserService',lambda db: DemandTextParserService(db,model))
     parsed=client.post('/api/v1/delivery-demands/parse-text',json={'text':'；'.join(phrases)})

@@ -54,7 +54,19 @@ class RagService:
             raise ValueError("知识库查询不能为空")
         limit = top_k or self.default_top_k
         query_embedding = self.embedding_client.embed_query(normalized_query)
-        return self.vector_store.search(query_embedding, limit, document_type)
+        results = self.vector_store.search(query_embedding, limit, document_type)
+        retired_sources = {"cold_chain_rules.md", "cargo_transport_rules.md"}
+        if any(item.source in retired_sources for item in results):
+            # Persisted vectors may predate retirement. Never return their obsolete
+            # transport rules; the normal rebuild command will index updated notices.
+            sections = self.loader.load_directory(self.knowledge_base_dir)
+            current = {(chunk.source, chunk.section, chunk.content)
+                       for chunk in self.splitter.split(sections)
+                       if chunk.source in retired_sources}
+            results = [item for item in results
+                       if item.source not in retired_sources
+                       or (item.source, item.section, item.content) in current]
+        return results
 
     def status(self) -> KnowledgeBaseStatus:
         try:

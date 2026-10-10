@@ -2,7 +2,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models.ai_operations import DemandBatchReceipt, DispatchQualityReport
 from app.models.store import Store
-from app.models.cargo_category import CargoCategory
 from app.models.delivery_demand import DeliveryDemand
 from app.models.audit_log import AuditLog
 
@@ -13,9 +12,6 @@ class AIOperationsRepository:
 
     def stores(self):
         return list(self.session.scalars(select(Store).where(Store.is_active.is_(True)).order_by(Store.id)))
-
-    def categories(self):
-        return list(self.session.scalars(select(CargoCategory).where(CargoCategory.is_active.is_(True)).order_by(CargoCategory.id)))
 
     def receipt(self, actor_id, key):
         return self.session.scalar(select(DemandBatchReceipt).where(DemandBatchReceipt.actor_id == actor_id, DemandBatchReceipt.request_key == key))

@@ -7,13 +7,10 @@ from app.schemas.vehicle import (
     VehicleTypeTerrainPermissionCreate,
     VehicleTypeTerrainPermissionResponse,
     VehicleTypeUpdate,
-    VehicleTypeCargoCapabilityReplace,
-    VehicleTypeCargoCapabilityResponse,
 )
 from app.services.vehicle_service import (
     VehicleTypeService,
     VehicleTypeTerrainPermissionService,
-    VehicleTypeCargoCapabilityService,
 )
 
 router = APIRouter(prefix="/vehicle-types", tags=["vehicle-types"])
@@ -85,23 +82,3 @@ def remove_terrain_permission(
 ) -> Response:
     VehicleTypeTerrainPermissionService(db).remove(vehicle_type_id, terrain_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.get(
-    "/{vehicle_type_id}/cargo-capabilities",
-    response_model=list[VehicleTypeCargoCapabilityResponse],
-)
-def list_cargo_capabilities(vehicle_type_id: int, db: DbSession):
-    return VehicleTypeCargoCapabilityService(db).list(vehicle_type_id)
-
-
-@router.put(
-    "/{vehicle_type_id}/cargo-capabilities",
-    response_model=list[VehicleTypeCargoCapabilityResponse],
-)
-def replace_cargo_capabilities(
-    vehicle_type_id: int,
-    data: VehicleTypeCargoCapabilityReplace,
-    db: DbSession,
-):
-    return VehicleTypeCargoCapabilityService(db).replace(vehicle_type_id, data)

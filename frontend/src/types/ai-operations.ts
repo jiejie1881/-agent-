@@ -1,11 +1,9 @@
 import type { DeliveryDemandPayload } from './delivery-demand'
 
-export type AIDemandPayload = Omit<DeliveryDemandPayload, 'cargo_category_id' | 'requires_temperature_control' | 'min_temperature' | 'max_temperature'> & Partial<Pick<DeliveryDemandPayload, 'cargo_category_id' | 'requires_temperature_control' | 'min_temperature' | 'max_temperature'>>
-
 export interface EntityMatch { id: number | null; method: string; candidates: { id: number; name: string; code: string }[] }
 export interface DemandPreview {
   source_text: string
-  data: Omit<AIDemandPayload, 'date' | 'store_id' | 'period' | 'quantity'> & {
+  data: Omit<DeliveryDemandPayload, 'date' | 'store_id' | 'period' | 'quantity'> & {
     date: string | null; store_id: number | null; period: string | null; quantity: string | number | null
   }
   sources: Record<string, string>

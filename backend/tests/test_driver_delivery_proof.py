@@ -5,7 +5,6 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from app.domain.enums import DeliveryDemandStatus, DeliveryPeriod
-from app.models.cargo_category import CargoCategory
 from app.models.audit_log import AuditLog
 from app.models.delivery_demand import DeliveryDemand
 from app.models.dispatch_plan import DispatchOrderDetail
@@ -32,15 +31,11 @@ def _add_second_stop(session, order, *, code: str = "DRIVER_STORE_C"):
     store = Store(code=code, name=f"{code}门店", address="岳麓区测试地址")
     session.add(store)
     session.flush()
-    cargo = session.scalar(
-        select(CargoCategory).where(CargoCategory.code == "NORMAL")
-    )
     demand = DeliveryDemand(
         date=date.today(),
         store_id=store.id,
         period=order.period,
         quantity=Decimal("50"),
-        cargo_category_id=cargo.id,
         status=DeliveryDemandStatus.PUBLISHED,
     )
     session.add(demand)

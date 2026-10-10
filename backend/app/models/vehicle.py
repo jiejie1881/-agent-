@@ -76,6 +76,7 @@ class VehicleTypeTerrainPermission(TimestampMixin, Base):
 
 
 class VehicleTypeCargoCapability(TimestampMixin, Base):
+    """Archive-only transport data. Not used by candidates or validators."""
     __tablename__ = "vehicle_type_cargo_capabilities"
     __table_args__ = (
         UniqueConstraint(

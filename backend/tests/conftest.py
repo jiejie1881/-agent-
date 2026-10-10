@@ -15,7 +15,6 @@ from app.infrastructure.database.session import get_db
 from app.main import app
 from app.domain.enums import UserRole
 from app.services.auth_service import AuthService
-from app.models.cargo_category import CargoCategory
 
 
 @pytest.fixture
@@ -27,15 +26,6 @@ def session() -> Session:
     )
     Base.metadata.create_all(engine)
     testing_session = sessionmaker(bind=engine, expire_on_commit=False)()
-    testing_session.add_all(
-        [
-            CargoCategory(code="NORMAL", name="常温商品"),
-            CargoCategory(code="FRESH", name="生鲜"),
-            CargoCategory(code="FROZEN", name="冷冻品"),
-            CargoCategory(code="BULK", name="大宗货物"),
-        ]
-    )
-    testing_session.commit()
     try:
         yield testing_session
     finally:

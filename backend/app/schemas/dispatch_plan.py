@@ -37,12 +37,7 @@ class PersistedDispatchOrderDetailResponse(BaseModel):
     store_latitude: Decimal | None
     quantity: Decimal
     status: DeliveryDemandStatus
-    cargo_category_code: str
-    cargo_category_name: str
     priority: DeliveryPriority
-    requires_temperature_control: bool
-    min_temperature: Decimal | None
-    max_temperature: Decimal | None
     delivery_status: DeliveryStopStatus
     receiver_name: str | None
     receiver_phone: str | None
@@ -82,12 +77,7 @@ class PersistedUnassignedDemandResponse(BaseModel):
     period: DeliveryPeriod
     quantity: Decimal
     reasons: list[str]
-    cargo_category_code: str
-    cargo_category_name: str
     priority: DeliveryPriority
-    requires_temperature_control: bool
-    min_temperature: Decimal | None
-    max_temperature: Decimal | None
 
 
 class DispatchPlanDetailResponse(DispatchPlanSummaryResponse):

@@ -17,7 +17,6 @@ class DeliveryDemandRepository(BaseRepository[DeliveryDemand]):
             select(DeliveryDemand)
             .options(
                 joinedload(DeliveryDemand.store),
-                joinedload(DeliveryDemand.cargo_category),
             )
             .where(DeliveryDemand.id == entity_id)
         )
@@ -33,7 +32,6 @@ class DeliveryDemandRepository(BaseRepository[DeliveryDemand]):
     ) -> list[DeliveryDemand]:
         statement = select(DeliveryDemand).options(
             joinedload(DeliveryDemand.store),
-            joinedload(DeliveryDemand.cargo_category),
         )
         if demand_date is not None:
             statement = statement.where(DeliveryDemand.date == demand_date)

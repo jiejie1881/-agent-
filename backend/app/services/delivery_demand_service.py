@@ -13,7 +13,6 @@ from app.domain.exceptions import (
 )
 from app.models.delivery_demand import DeliveryDemand
 from app.repositories.delivery_demand_repository import DeliveryDemandRepository
-from app.repositories.cargo_category_repository import CargoCategoryRepository
 from app.repositories.store_repository import StoreRepository
 from app.schemas.delivery_demand import DeliveryDemandCreate, DeliveryDemandUpdate
 from app.services.base import BaseService
@@ -25,9 +24,7 @@ from app.services.audit_log_service import AuditAction, AuditLogService
 class DeliveryDemandService(BaseService):
     CORE_BUSINESS_FIELDS = frozenset(
         {
-            "date", "store_id", "period", "quantity", "cargo_category_id",
-            "priority", "requires_temperature_control", "min_temperature",
-            "max_temperature",
+            "date", "store_id", "period", "quantity", "priority",
         }
     )
 
@@ -35,7 +32,6 @@ class DeliveryDemandService(BaseService):
         super().__init__(session)
         self.repository = DeliveryDemandRepository(session)
         self.store_repository = StoreRepository(session)
-        self.cargo_category_repository = CargoCategoryRepository(session)
         self.status_service = DeliveryDemandStatusService(session)
 
     def list(
@@ -67,10 +63,7 @@ class DeliveryDemandService(BaseService):
             data.date, data.store_id, data.period
         ):
             raise ConflictError("该门店当天同一时段已有配送需求")
-        category_id = data.cargo_category_id or self._default_category_id()
-        self._validate_category(category_id)
-        values = data.model_dump(exclude={"cargo_category_id"})
-        demand = DeliveryDemand(**values, cargo_category_id=category_id)
+        demand = DeliveryDemand(**data.model_dump())
         def action() -> DeliveryDemand:
             created = self.repository.add(demand)
             AuditLogService(self.session).add(
@@ -104,16 +97,6 @@ class DeliveryDemandService(BaseService):
         store_id = updates.get("store_id", demand.store_id)
         period = updates.get("period", demand.period)
         self._validate_store(store_id)
-        category_id = updates.get("cargo_category_id", demand.cargo_category_id)
-        self._validate_category(category_id)
-        requires_temperature_control = updates.get(
-            "requires_temperature_control", demand.requires_temperature_control
-        )
-        min_temperature = updates.get("min_temperature", demand.min_temperature)
-        max_temperature = updates.get("max_temperature", demand.max_temperature)
-        self._validate_temperature_range(
-            requires_temperature_control, min_temperature, max_temperature
-        )
         duplicate = self.repository.get_by_business_key(
             demand_date, store_id, period
         )
@@ -141,34 +124,6 @@ class DeliveryDemandService(BaseService):
             action,
             "该门店当天同一时段已有配送需求",
         )
-
-    def _default_category_id(self) -> int:
-        category = self.cargo_category_repository.get_by_code("NORMAL")
-        if category is None:
-            raise ConflictError("系统缺少默认 NORMAL 货物分类")
-        return category.id
-
-    def _validate_category(self, category_id: int) -> None:
-        category = self.cargo_category_repository.get(category_id)
-        if category is None:
-            raise NotFoundError("货物分类不存在")
-        if not category.is_active:
-            raise ConflictError("货物分类已停用")
-
-    @staticmethod
-    def _validate_temperature_range(
-        required: bool,
-        min_temperature,
-        max_temperature,
-    ) -> None:
-        if required and (min_temperature is None or max_temperature is None):
-            raise ConflictError("温控需求必须填写最低温度和最高温度")
-        if (
-            min_temperature is not None
-            and max_temperature is not None
-            and min_temperature > max_temperature
-        ):
-            raise ConflictError("最低温度不能大于最高温度")
 
     def cancel(self, demand_id: int) -> DeliveryDemand:
         demand = self.get(demand_id)

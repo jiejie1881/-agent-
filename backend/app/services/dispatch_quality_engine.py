@@ -1,5 +1,5 @@
 """Pure deterministic rule engine. No DB and no model calls."""
-RULE_VERSION = "dispatch-quality-v1"
+RULE_VERSION = "dispatch-quality-v2"
 WEIGHTS = {"allocation": 35, "compliance": 25, "utilization": 15, "readiness": 10, "exceptions": 10, "traceability": 5}
 
 def ratio(n, d):

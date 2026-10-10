@@ -10,7 +10,6 @@ import {
   updateDeliveryDemand,
 } from '@/api/delivery-demands'
 import { listStores } from '@/api/stores'
-import { listCargoCategories } from '@/api/cargo-categories'
 import type {
   DeliveryDemand,
   DeliveryDemandPayload,
@@ -18,7 +17,6 @@ import type {
   DeliveryPeriod,
 } from '@/types/delivery-demand'
 import type { Store } from '@/types/store'
-import type { CargoCategory } from '@/types/cargo'
 import DeliveryDemandFormDialog from '@/views/operations/components/DeliveryDemandFormDialog.vue'
 import AIDemandDialog from '@/views/operations/components/AIDemandDialog.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -41,7 +39,6 @@ const loading = ref(false)
 const submitting = ref(false)
 const demands = ref<DeliveryDemand[]>([])
 const stores = ref<Store[]>([])
-const cargoCategories = ref<CargoCategory[]>([])
 const dialogVisible = ref(false)
 const aiDialogVisible = ref(false)
 async function aiCreated(dates: string[]) {
@@ -79,14 +76,12 @@ function getStatusMeta(status: DeliveryDemandStatus) {
 async function loadData() {
   loading.value = true
   try {
-    const [demandResponse, storeResponse, categoryResponse] = await Promise.all([
+    const [demandResponse, storeResponse] = await Promise.all([
       listDeliveryDemands({ date: selectedDate.value, offset: 0, limit: 100 }),
       listStores({ offset: 0, limit: 100 }),
-      listCargoCategories(),
     ])
     demands.value = demandResponse.data
     stores.value = storeResponse.data
-    cargoCategories.value = categoryResponse.data.filter((item) => item.is_active)
   } catch {
     // Axios interceptor displays backend errors.
   } finally {
@@ -195,9 +190,7 @@ onMounted(loadData)
         <el-table-column prop="quantity" label="货量" width="140" align="right">
           <template #default="{ row }"><strong>{{ Number(row.quantity).toFixed(2) }}</strong></template>
         </el-table-column>
-        <el-table-column label="货物" min-width="150"><template #default="{ row }"><strong>{{ row.cargo_category.name }}</strong><div class="secondary-text">{{ row.cargo_category.code }}</div></template></el-table-column>
         <el-table-column label="优先级" width="100" align="center"><template #default="{ row }"><el-tag :type="row.priority === 'URGENT' ? 'danger' : row.priority === 'HIGH' ? 'warning' : 'info'">{{ row.priority === 'URGENT' ? '加急' : row.priority === 'HIGH' ? '高' : '普通' }}</el-tag></template></el-table-column>
-        <el-table-column label="温控" width="150"><template #default="{ row }">{{ row.requires_temperature_control ? `${row.min_temperature}℃ ~ ${row.max_temperature}℃` : '无需温控' }}</template></el-table-column>
         <el-table-column label="状态" width="120" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusMeta(row.status).type">{{ getStatusMeta(row.status).label }}</el-tag>
@@ -231,7 +224,6 @@ onMounted(loadData)
       :demand="editingDemand"
       :default-date="selectedDate"
       :stores="stores"
-      :cargo-categories="cargoCategories"
       :submitting="submitting"
       @submit="submitDemand"
     />

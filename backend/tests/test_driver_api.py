@@ -11,7 +11,6 @@ from app.domain.enums import (
     VehicleTypeCode,
 )
 from app.models.audit_log import AuditLog
-from app.models.cargo_category import CargoCategory
 from app.models.delivery_demand import DeliveryDemand
 from app.models.dispatch_plan import DispatchOrder, DispatchOrderDetail, DispatchPlan
 from app.models.route import Route
@@ -71,14 +70,12 @@ def _setup_driver_tasks(session):
     )
     session.add_all([vehicle_a, vehicle_b, store_a, store_b])
     session.flush()
-    cargo = session.scalar(select(CargoCategory).where(CargoCategory.code == "NORMAL"))
     today = date.today()
     demand_a = DeliveryDemand(
         date=today,
         store_id=store_a.id,
         period=DeliveryPeriod.MORNING,
         quantity=Decimal("100"),
-        cargo_category_id=cargo.id,
         status=DeliveryDemandStatus.PUBLISHED,
     )
     demand_b = DeliveryDemand(
@@ -86,7 +83,6 @@ def _setup_driver_tasks(session):
         store_id=store_b.id,
         period=DeliveryPeriod.AFTERNOON,
         quantity=Decimal("120"),
-        cargo_category_id=cargo.id,
         status=DeliveryDemandStatus.PUBLISHED,
     )
     plan = DispatchPlan(

@@ -6,10 +6,6 @@ import type {
   VehicleType,
   VehicleTypePayload,
 } from '@/types/vehicle'
-import type {
-  VehicleTypeCargoCapability,
-  VehicleTypeCargoCapabilityInput,
-} from '@/types/cargo'
 
 export function listVehicleTypes(params: { offset?: number; limit?: number } = {}) {
   return http.get<VehicleType[]>('/vehicle-types', { params })
@@ -30,21 +26,7 @@ export function deleteVehicleType(vehicleTypeId: number) {
   return http.delete(`/vehicle-types/${vehicleTypeId}`)
 }
 
-export function listVehicleTypeCargoCapabilities(vehicleTypeId: number) {
-  return http.get<VehicleTypeCargoCapability[]>(
-    `/vehicle-types/${vehicleTypeId}/cargo-capabilities`,
-  )
-}
 
-export function replaceVehicleTypeCargoCapabilities(
-  vehicleTypeId: number,
-  capabilities: VehicleTypeCargoCapabilityInput[],
-) {
-  return http.put<VehicleTypeCargoCapability[]>(
-    `/vehicle-types/${vehicleTypeId}/cargo-capabilities`,
-    { capabilities },
-  )
-}
 
 export function listVehicles(params: { offset?: number; limit?: number } = {}) {
   return http.get<Vehicle[]>('/vehicles', { params })

@@ -62,12 +62,7 @@ class DriverTaskStopResponse(BaseModel):
     longitude: Decimal | None
     latitude: Decimal | None
     quantity: Decimal
-    cargo_category_code: str
-    cargo_category_name: str
     priority: DeliveryPriority
-    requires_temperature_control: bool
-    min_temperature: Decimal | None
-    max_temperature: Decimal | None
     delivery_status: DeliveryStopStatus
     arrived_at: datetime | None
     signed_at: datetime | None

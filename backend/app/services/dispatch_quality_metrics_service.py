@@ -7,7 +7,6 @@ def issue_category(code):
     if code.startswith(('LOAD', 'VEHICLE_OVER', 'BELOW', 'ABOVE', 'INVALID_VEHICLE_LOAD')) or 'LOAD' in code: return 'load'
     if 'TERRAIN' in code: return 'terrain'
     if 'ROUTE' in code: return 'route'
-    if 'TEMPERATURE' in code or 'CARGO' in code: return 'cargo'
     if 'PERIOD' in code: return 'period'
     if 'VEHICLE' in code or 'ATTENDANCE' in code: return 'vehicle'
     return 'data'
@@ -51,5 +50,4 @@ class DispatchQualityMetricsService:
         traces = {"version": plan.version > 0 and bool(plan.delivery_date), "scope_represented": represented == set(scope_by_id), "task_links": all(o.plan_id == plan.id and o.route_id and o.vehicle_id for o in plan.orders), "driver_snapshots": bool(plan.orders) and all(o.actual_driver_id and o.driver_username_snapshot for o in plan.orders)}
         categorized = [{**i, "category": issue_category(i['code'])} for i in issues]
         groups = {'vehicle', 'driver', 'load', 'terrain', 'route', 'period', 'data'} if plan.orders else set()
-        if any(d.delivery_demand.requires_temperature_control or d.delivery_demand.cargo_category_id for o in plan.orders for d in o.details): groups.add('cargo')
         return metrics, trips, unassigned, exceptions, traces, categorized, groups

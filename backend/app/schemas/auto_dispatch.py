@@ -35,12 +35,7 @@ class DispatchStoreResponse(BaseModel):
     store_code: str
     store_name: str
     quantity: Decimal
-    cargo_category_code: str
-    cargo_category_name: str
     priority: DeliveryPriority
-    requires_temperature_control: bool
-    min_temperature: Decimal | None
-    max_temperature: Decimal | None
 
 
 class DispatchTripResponse(BaseModel):
@@ -60,12 +55,7 @@ class UnassignedDemandResponse(BaseModel):
     period: DeliveryPeriod
     quantity: Decimal
     reasons: list[str]
-    cargo_category_code: str
-    cargo_category_name: str
     priority: DeliveryPriority
-    requires_temperature_control: bool
-    min_temperature: Decimal | None
-    max_temperature: Decimal | None
 
 
 class AutoDispatchResponse(BaseModel):

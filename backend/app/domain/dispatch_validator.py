@@ -6,8 +6,6 @@ from app.domain.constraints import (
     RouteConstraint,
     TerrainConstraint,
     VehicleAvailableConstraint,
-    CargoCompatibilityConstraint,
-    TemperatureConstraint,
 )
 from app.domain.constraints.base import (
     ConstraintResult,
@@ -21,8 +19,6 @@ DEFAULT_CONSTRAINTS: tuple[DispatchConstraint, ...] = (
     TerrainConstraint(),
     RouteConstraint(),
     LoadConstraint(),
-    CargoCompatibilityConstraint(),
-    TemperatureConstraint(),
 )
 
 

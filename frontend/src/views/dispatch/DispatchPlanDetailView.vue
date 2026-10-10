@@ -533,9 +533,6 @@ onMounted(loadPlan)
                 <div class="store-code">{{ row.store_code }}</div>
               </template>
             </el-table-column>
-            <el-table-column prop="delivery_demand_id" label="需求 ID" min-width="120" align="center" />
-            <el-table-column label="货物/优先级" min-width="170"><template #default="{ row }"><strong>{{ row.cargo_category_name }}</strong><div class="store-code">{{ row.cargo_category_code }} · {{ row.priority === 'URGENT' ? '加急' : row.priority === 'HIGH' ? '高' : '普通' }}</div></template></el-table-column>
-            <el-table-column label="温控要求" min-width="160"><template #default="{ row }">{{ row.requires_temperature_control ? `${row.min_temperature}℃ ~ ${row.max_temperature}℃` : '无需温控' }}</template></el-table-column>
             <el-table-column label="需求编号" min-width="190"><template #default="{row}">{{ businessRef('DEM',row.delivery_demand_id,plan.delivery_date) }}</template></el-table-column>
           <el-table-column label="优先级" min-width="100"><template #default="{ row }">{{ row.priority === 'URGENT' ? '加急' : row.priority === 'HIGH' ? '高' : '普通' }}</template></el-table-column>
             <el-table-column label="执行状态" min-width="130" align="center">
@@ -571,8 +568,6 @@ onMounted(loadPlan)
           <el-table-column label="货量" width="130" align="right">
             <template #default="{ row }"><strong>{{ formatQuantity(row.quantity) }}</strong></template>
           </el-table-column>
-          <el-table-column label="货物/优先级" min-width="170"><template #default="{ row }"><strong>{{ row.cargo_category_name }}</strong><div class="store-code">{{ row.priority === 'URGENT' ? '加急' : row.priority === 'HIGH' ? '高' : '普通' }}</div></template></el-table-column>
-          <el-table-column label="温控" min-width="150"><template #default="{ row }">{{ row.requires_temperature_control ? `${row.min_temperature}℃ ~ ${row.max_temperature}℃` : '无需温控' }}</template></el-table-column>
           <el-table-column label="优先级" min-width="100"><template #default="{ row }">{{ row.priority === 'URGENT' ? '加急' : row.priority === 'HIGH' ? '高' : '普通' }}</template></el-table-column>
           <el-table-column label="未分配原因" min-width="320">
             <template #default="{ row }">
