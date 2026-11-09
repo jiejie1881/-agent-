@@ -86,7 +86,7 @@ def sync_memories(current_user: CurrentUser, db: DbSession):
     try:
         svc = service(db)
         processed = svc.sync(current_user.id)
-        return {'processed': processed, 'outbox': svc.sync_outbox(limit=200)}
+        return {'processed': processed, 'outbox': svc.sync_outbox(limit=200, user_id=current_user.id)}
     except HTTPException:
         raise
     except Exception:
@@ -97,8 +97,10 @@ def sync_memories(current_user: CurrentUser, db: DbSession):
 def rebuild_index(current_user: CurrentUser, db: DbSession):
     try:
         return service(db).rebuild_index(current_user.id)
-    except Exception as exc:  # noqa: BLE001 - 重建失败必须显式暴露
-        raise HTTPException(503, f'索引重建失败: {exc}') from None
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(503, '索引重建失败，可稍后重试') from None
 
 
 @router.post('/session-summaries')

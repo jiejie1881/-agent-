@@ -1,0 +1,67 @@
+name: logistics-v21-closure-20261109
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: logistics_v21_acceptance
+      MYSQL_USER: acceptance
+      MYSQL_PASSWORD: ${V21_MYSQL_PASSWORD:?required}
+      MYSQL_ROOT_PASSWORD: ${V21_MYSQL_ROOT_PASSWORD:?required}
+    volumes:
+      - mysql:/var/lib/mysql
+    healthcheck:
+      test: [CMD, mysqladmin, ping, -h, 127.0.0.1, --silent]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+  backend:
+    image: logistics-v21-closure-backend:${V21_REVISION:?required}
+    build:
+      context: ./backend
+      labels:
+        org.opencontainers.image.revision: ${V21_REVISION:?required}
+    environment:
+      DATABASE_URL: mysql+pymysql://acceptance:${V21_MYSQL_PASSWORD:?required}@mysql/logistics_v21_acceptance
+      JWT_SECRET_KEY: ${V21_JWT_SECRET:?required}
+      APP_ENVIRONMENT: development
+      API_DOCS_ENABLED: 'true'
+      RUN_MIGRATIONS: 'true'
+      AGENT_MEMORY_ENABLED: 'true'
+      AGENT_MEMORY_VECTOR_DIR: /app/agent_data/memory_chroma
+      AGENT_CHECKPOINT_PATH: /app/agent_data/checkpoints.sqlite3
+      RAG_VECTOR_STORE_DIR: /app/rag_data/chroma
+      ANONYMIZED_TELEMETRY: 'false'
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - target: 8000
+        host_ip: 127.0.0.1
+    volumes:
+      - checkpoint:/app/agent_data
+      - rag:/app/rag_data
+      - uploads:/app/uploads
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+  frontend:
+    image: logistics-v21-closure-frontend:${V21_REVISION:?required}
+    build:
+      context: ./frontend
+      labels:
+        org.opencontainers.image.revision: ${V21_REVISION:?required}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - target: 80
+        host_ip: 127.0.0.1
+
+volumes:
+  mysql:
+  checkpoint:
+  rag:
+  uploads:

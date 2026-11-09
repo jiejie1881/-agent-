@@ -559,11 +559,27 @@ class AgentMemoryService:
             entry.available_at = (utcnow() + timedelta(seconds=backoff)).replace(microsecond=0)
             entry.updated_at = utcnow()
 
-    def sync_outbox(self, limit: int = _OUTBOX_BATCH) -> dict[str, int]:
-        """排空 Outbox（全局，跨用户）：幂等、失败退避、崩溃可重放。"""
+    def _outbox_scope(self, user_id: int | None):
+        conditions = [AgentMemoryOutbox.tenant_id == self.tenant_id,
+                      AgentMemoryOutbox.project_id == self.project_id,
+                      AgentMemoryOutbox.embedding_version == self.embedding_version]
+        if user_id is not None:
+            conditions.append(AgentMemoryOutbox.user_id == int(user_id))
+        return conditions
+
+    def _vector_scope(self, user_id: int | None):
+        conditions = [{"tenant_id": self.tenant_id}, {"project_id": self.project_id},
+                      {"embedding_version": self.embedding_version}]
+        if user_id is not None:
+            conditions.append({"user_id": str(int(user_id))})
+        return {"$and": conditions}
+
+    def sync_outbox(self, limit: int = _OUTBOX_BATCH, *, user_id: int | None = None) -> dict[str, int]:
+        """排空项目 Outbox。HTTP 调用只处理当前用户的任务。"""
+        conditions = self._outbox_scope(user_id)
         self.db.execute(
             sql_update(AgentMemoryOutbox)
-            .where(AgentMemoryOutbox.status == "PROCESSING")
+            .where(*conditions, AgentMemoryOutbox.status == "PROCESSING")
             .values(status="PENDING")
         )
         self.db.commit()
@@ -573,8 +589,7 @@ class AgentMemoryService:
             self.db.scalars(
                 select(AgentMemoryOutbox)
                 .where(
-                    AgentMemoryOutbox.tenant_id == self.tenant_id,
-                    AgentMemoryOutbox.project_id == self.project_id,
+                    *conditions,
                     AgentMemoryOutbox.status.in_(["PENDING", "FAILED"]),
                     AgentMemoryOutbox.available_at <= now,
                 )
@@ -618,16 +633,16 @@ class AgentMemoryService:
             select(func.count())
             .select_from(AgentMemoryOutbox)
             .where(
-                AgentMemoryOutbox.tenant_id == self.tenant_id,
-                AgentMemoryOutbox.project_id == self.project_id,
+                *conditions,
                 AgentMemoryOutbox.status.in_(["PENDING", "FAILED"]),
             )
         )
         return {"processed": processed, "failed": failed, "remaining": int(remaining or 0)}
 
     def rebuild_index(self, user_id: int | None = None) -> dict:
-        """索引重建：清空集合并从 MySQL 全量重放（可重复执行）。"""
-        self.collection.reset() if hasattr(self.collection, "reset") else self._reset_raw()
+        """从 MySQL 重建指定范围的投影，保留范围之外的向量和待同步任务。"""
+        where = self._vector_scope(user_id)
+        existing = set(self.collection.get(where=where, include=[]).get("ids") or [])
         conditions = [AgentMemory.tenant_id == self.tenant_id, AgentMemory.project_id == self.project_id]
         if user_id is not None:
             conditions.append(AgentMemory.user_id == int(user_id))
@@ -647,20 +662,11 @@ class AgentMemoryService:
                 documents=[row.memory_value],
                 metadatas=[self._payload(row, status=row.status)],
             )
-        self.db.execute(
-            sql_update(AgentMemoryOutbox)
-            .where(
-                AgentMemoryOutbox.tenant_id == self.tenant_id,
-                AgentMemoryOutbox.project_id == self.project_id,
-                AgentMemoryOutbox.status.in_(["PENDING", "PROCESSING", "FAILED"]),
-            )
-            .values(status="DONE", last_error=None, updated_at=utcnow())
-        )
-        self.db.commit()
-        mysql_active = self.db.scalar(
-            select(func.count()).select_from(AgentMemory).where(*conditions, AgentMemory.status == MEMORY_STATUS_ACTIVE)
-        )
-        vectors = self.collection.count()
+        stale = existing.difference(row.memory_id for row in rows)
+        if stale:
+            self.collection.delete(ids=sorted(stale))
+        mysql_active = len(rows)
+        vectors = len(self.collection.get(where=where, include=[]).get("ids") or [])
         return {
             "project_id": self.project_id,
             "tenant_id": self.tenant_id,
@@ -669,12 +675,6 @@ class AgentMemoryService:
             "chroma_vectors": int(vectors),
             "consistent": int(mysql_active or 0) == int(vectors),
         }
-
-    def _reset_raw(self) -> None:
-        """测试用原生 collection 无法 reset 时的兜底：清空全部记录。"""
-        payload = self.collection.get(include=[])
-        ids = payload.get("ids") or []
-        self.collection.delete(ids=ids)
 
     def stats(self, user_id: int | None = None) -> dict:
         conditions = [AgentMemory.tenant_id == self.tenant_id, AgentMemory.project_id == self.project_id]
@@ -687,12 +687,11 @@ class AgentMemoryService:
             select(func.count())
             .select_from(AgentMemoryOutbox)
             .where(
-                AgentMemoryOutbox.tenant_id == self.tenant_id,
-                AgentMemoryOutbox.project_id == self.project_id,
+                *self._outbox_scope(user_id),
                 AgentMemoryOutbox.status.in_(["PENDING", "FAILED"]),
             )
         )
-        vectors = self.collection.count()
+        vectors = len(self.collection.get(where=self._vector_scope(user_id), include=[]).get("ids") or [])
         return {
             "tenant_id": self.tenant_id,
             "project_id": self.project_id,

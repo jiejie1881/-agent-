@@ -29,6 +29,24 @@ def test_cross_session_recall_and_user_isolation(memory):
         memory.delete(2, row.memory_id)
 
 
+def test_scoped_maintenance_preserves_other_users_vectors_and_jobs(memory):
+    first = memory.save(1, '甲用户关注冷链')
+    second = memory.save(2, '乙用户关注常温')
+    assert memory.sync_outbox(user_id=1)['processed'] == 1
+    assert memory.stats(1)['outbox_pending'] == 0
+    assert memory.stats(2)['outbox_pending'] == 1
+    assert memory.sync_outbox(user_id=2)['processed'] == 1
+
+    pending = memory.save(2, '乙用户补充偏好')
+    assert memory.rebuild_index(1)['consistent'] is True
+    assert memory.collection.count() == 2
+    assert memory.search(1, '偏好')[0]['memory_id'] == first.memory_id
+    assert memory.search(2, '偏好')[0]['memory_id'] == second.memory_id
+    assert memory.stats(1)['chroma_vectors'] == memory.stats(2)['chroma_vectors'] == 1
+    assert memory.stats(2)['outbox_pending'] == 1
+    assert memory.owned(2, pending.memory_id).status == 'PENDING'
+
+
 def test_tombstone_hides_stale_vector_and_sync_cleans(memory):
     row = memory.save(1, '优先重型车')
     memory.sync(1)
