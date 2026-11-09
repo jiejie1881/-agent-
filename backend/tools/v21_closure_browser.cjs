@@ -25,7 +25,7 @@ async function main() {
     await page.locator('input[autocomplete="username"]').fill(user);
     await page.locator('input[type="password"]').fill(process.env.V21_PROBE_PASSWORD);
     await page.getByRole('button', {name: '登录', exact: true}).click();
-    await page.waitForURL('**/agent');
+    await page.waitForURL(url => url.pathname === '/agent');
     return page;
   }
 

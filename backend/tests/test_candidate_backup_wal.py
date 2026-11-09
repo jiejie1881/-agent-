@@ -28,7 +28,7 @@ def pack(items):
 
 class BackupWalTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='backup-wal-test-', dir=update.ROOT / 'backend/tmp')
+        self.temp = tempfile.TemporaryDirectory(prefix='backup-wal-test-')
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
 
