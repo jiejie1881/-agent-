@@ -1,0 +1,15 @@
+2026-11-09T11:48:10.2237989+08:00
+logistics-v21-closure-20261109-frontend-1 127.0.0.1:52206->80/tcp Up About a minute
+logistics-v21-closure-20261109-backend-1 127.0.0.1:62368->8000/tcp Up 2 minutes (healthy)
+logistics-v21-closure-20261109-synthetic 127.0.0.1:64666->8000/tcp Up 4 minutes (healthy)
+logistics-v21-closure-20261109-backend-b 127.0.0.1:62313->8000/tcp Up 11 minutes (healthy)
+logistics-v21-closure-20261109-mysql-1 3306/tcp, 33060/tcp Up 20 minutes (healthy)
+/logistics-v21-closure-20261109-backend-1 49392f272c882ce464f5c4de990f7eb653a0b9f9 sha256:910823fdb70e0c00820d946438a919d801011ef04a5c1585ab84190270a0474e
+/logistics-v21-closure-20261109-frontend-1 49392f272c882ce464f5c4de990f7eb653a0b9f9 sha256:542e205c5158077bd7c03ed4da1b6806913b14ac22168acbf7412f080d3ff391
+2d17ed8203d325b29520f1ed7670830d79aa46809492be62e8e59ceb5b4c04f9  /app/app/agent/stream_events.py
+f2a0c59c4e533f1d9e276ae1d72cb85ae719b277e444a9d55dd8b5bc021cdff6  /app/app/agent/stream_store.py
+c4834d02fd766db431af99f3dc155ac5cce27032d36b2290d23b016275b12d14  /app/app/api/v1/endpoints/agent_stream.py
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+20261108_30 (head)
+ready=200

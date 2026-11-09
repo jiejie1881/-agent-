@@ -1,0 +1,669 @@
+{
+  "revision": "49392f272c882ce464f5c4de990f7eb653a0b9f9",
+  "generated_at_utc": "2026-11-09T03:51:47.482274+00:00",
+  "final_host": {
+    "counts": {
+      "passed": 1586,
+      "failure": 0,
+      "error": 0,
+      "skipped": 25
+    },
+    "skipped_cases": [
+      {
+        "node": "tests.test_agent_memory_core::test_write_get_list_update_versions",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_audit_does_not_store_plaintext",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_vector_metadata_and_recall",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_embedding_version_isolation_rejected",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_outbox_pending_failed_and_recovered",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_deleted_row_is_not_projected",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_user_isolation",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_tenant_and_project_isolation",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_soft_delete_then_hard_delete",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_archive_keeps_row_but_drops_vector",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_idempotent_write_and_rebuild",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_session_summary_links_task_memory",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_sensitive_content_rejected",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_identity_and_owned_schema",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_business_write_and_audit_rollback_together",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_simultaneous_confirmation_has_one_commit_and_one_audit",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_plan_lock_prevents_stale_approval_during_concurrent_change",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_lost_commit_response_recovers_verified_receipt",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_business_pending_action_resumes_after_service_reconstruction",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_multiple_threads_have_distinct_checkpoints_and_real_tool_results",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_rag_metrics::test_aggregate_reproduces_archived_stage7_evidence[bm25]",
+        "reason": "archived Stage 7 evidence missing"
+      },
+      {
+        "node": "tests.test_rag_metrics::test_aggregate_reproduces_archived_stage7_evidence[vector]",
+        "reason": "archived Stage 7 evidence missing"
+      },
+      {
+        "node": "tests.test_rag_metrics::test_aggregate_reproduces_archived_stage7_evidence[hybrid]",
+        "reason": "archived Stage 7 evidence missing"
+      },
+      {
+        "node": "tests.test_agent_reliability_process::test_real_process_restart_recovers_durable_tool_output",
+        "reason": "Requires the reviewed two-process evidence runner"
+      },
+      {
+        "node": "tests.test_agent_task3_browser::test_owned_browser_service",
+        "reason": "Explicit temporary browser service only"
+      }
+    ],
+    "failed_cases": []
+  },
+  "missing_final_reports": [],
+  "baseline": {
+    "counts": {
+      "passed": 1568,
+      "failure": 14,
+      "error": 67,
+      "skipped": 25
+    },
+    "skipped_cases": [
+      {
+        "node": "tests.test_agent_memory_core::test_write_get_list_update_versions",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_audit_does_not_store_plaintext",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_vector_metadata_and_recall",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_embedding_version_isolation_rejected",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_outbox_pending_failed_and_recovered",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_deleted_row_is_not_projected",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_user_isolation",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_tenant_and_project_isolation",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_soft_delete_then_hard_delete",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_archive_keeps_row_but_drops_vector",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_idempotent_write_and_rebuild",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_session_summary_links_task_memory",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_memory_core::test_sensitive_content_rejected",
+        "reason": "需要真实 MySQL（LOGISTICS_MEMORY_TEST_MYSQL_URL）"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_identity_and_owned_schema",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_business_write_and_audit_rollback_together",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_simultaneous_confirmation_has_one_commit_and_one_audit",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_plan_lock_prevents_stale_approval_during_concurrent_change",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_lost_commit_response_recovers_verified_receipt",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_business_pending_action_resumes_after_service_reconstruction",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_mysql::test_mysql_multiple_threads_have_distinct_checkpoints_and_real_tool_results",
+        "reason": "Requires the dedicated identity-attested MySQL executor; never use a business database"
+      },
+      {
+        "node": "tests.test_agent_reliability_process::test_real_process_restart_recovers_durable_tool_output",
+        "reason": "Requires the reviewed two-process evidence runner"
+      },
+      {
+        "node": "tests.test_agent_task3_browser::test_owned_browser_service",
+        "reason": "Explicit temporary browser service only"
+      },
+      {
+        "node": "tests.test_rag_metrics::test_aggregate_reproduces_archived_stage7_evidence[bm25]",
+        "reason": "archived Stage 7 evidence missing"
+      },
+      {
+        "node": "tests.test_rag_metrics::test_aggregate_reproduces_archived_stage7_evidence[vector]",
+        "reason": "archived Stage 7 evidence missing"
+      },
+      {
+        "node": "tests.test_rag_metrics::test_aggregate_reproduces_archived_stage7_evidence[hybrid]",
+        "reason": "archived Stage 7 evidence missing"
+      }
+    ],
+    "failed_cases": [
+      {
+        "node": "::tests.test_candidate_backup_wal",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_01_noatime_preserves_deliberately_old_atime",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_02_permission_failure_has_no_fallback",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_04_symlink_rejected",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_05_hardlink_rejected",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_06_size_limit_rejected",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_07_mutation_during_read_rejected",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_09_rollback_journal_rejected",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_10_delete_snapshot_and_whitelist_queries",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_11_wal_commit_included_without_source_checkpoint",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_16_destination_existing_rejected",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_17_source_sidecar_symlink_rejected",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_18_group_mutation_between_reads_rejected",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_20_write_scope_device_open_is_denied",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_budget_ledger_forensics.R0SyntheticTests::test_22_symlink_evidence_directory_rejected",
+        "status": "failure",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_open_pointer_reader_does_not_block_atomic_activation",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_atomic_replace_failure_retains_old_complete_pointer",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_bad_pointer_fails_closed_without_repair[{]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_bad_pointer_fails_closed_without_repair[{\"manifest\":\"../foreign.json\"}]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_bad_pointer_fails_closed_without_repair[{\"manifest\":\"absent.json\"}]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_readers_pin_versions_during_twenty_reads_and_four_switches[0]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_readers_pin_versions_during_twenty_reads_and_four_switches[1]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_readers_pin_versions_during_twenty_reads_and_four_switches[2]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_failed_flush_never_exposes_partial_pointer",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_shared_reader_closes_handle_after_invalid_utf8",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_shared_handle_allows_replace_before_close",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_native_rename_invalid_destination_preserves_source_and_old_pointer",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_fdopen_failure_preserves_error_and_closes_native_handle",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_unicode_and_extended_length_paths[False]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_unicode_and_extended_length_paths[True]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_native_rename_filename_length_does_not_depend_on_struct_padding[0]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_native_rename_filename_length_does_not_depend_on_struct_padding[1]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_native_rename_filename_length_does_not_depend_on_struct_padding[2]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_native_rename_filename_length_does_not_depend_on_struct_padding[3]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_native_rename_filename_length_does_not_depend_on_struct_padding[4]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_native_rename_filename_length_does_not_depend_on_struct_padding[5]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_native_rename_filename_length_does_not_depend_on_struct_padding[6]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_pointer::test_native_rename_filename_length_does_not_depend_on_struct_padding[7]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_original_keyword_vector_function_collapses_identifier_only_inputs",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifier_sensitive_fixture_retrieval_is_stable[V1]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifier_sensitive_fixture_retrieval_is_stable[V2]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifier_sensitive_fixture_retrieval_is_stable[V10]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifier_sensitive_fixture_retrieval_is_stable[V02]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifier_sensitive_fixture_retrieval_is_stable[BIG_VAN]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifier_sensitive_fixture_retrieval_is_stable[SMALL_VAN]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifier_sensitive_fixture_retrieval_is_stable[STORE-001]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifier_sensitive_fixture_retrieval_is_stable[STORE-01]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifier_sensitive_fixture_retrieval_is_stable[VEH-028]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_identifiers_keep_leading_zero_and_normalize_case_without_numeric_coercion",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_rrf_equal_scores_use_stable_string_ids_not_natural_business_sort",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_non_string_chunk_identifier_is_not_implicitly_coerced[None]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_non_string_chunk_identifier_is_not_implicitly_coerced[2]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_non_string_chunk_identifier_is_not_implicitly_coerced[bad2]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_non_string_chunk_identifier_is_not_implicitly_coerced[bad3]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_missing_identifier_rejected_before_fusion",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_ranking::test_same_business_identifier_in_two_sources_retains_both_stable_chunk_ids",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_worker_blocks_prohibited_operations[dns]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_worker_blocks_prohibited_operations[tcp]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_worker_blocks_prohibited_operations[udp]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_worker_blocks_prohibited_operations[process]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_worker_blocks_prohibited_operations[native-vector]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_worker_blocks_prohibited_operations[native-db]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_runner_isolated_cwd_and_no_existing_environment",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_same_resolved_windows_path_with_extended_spelling_stays_inside",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_boundary_rejects_lexical_escape_without_attempting_any_write[../escape.json]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_batch2_safety::test_boundary_rejects_lexical_escape_without_attempting_any_write[../../escape.json]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_metrics_match_actual_shared_implementation[development-B]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_metrics_match_actual_shared_implementation[development-R]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_metrics_match_actual_shared_implementation[development-W2]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_metrics_match_actual_shared_implementation[development-L2]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_metrics_match_actual_shared_implementation[fixed-B]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_metrics_match_actual_shared_implementation[fixed-R]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_metrics_match_actual_shared_implementation[fixed-W2]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_metrics_match_actual_shared_implementation[fixed-L2]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_focus_failures_and_negative_examples_retained[h04]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_focus_failures_and_negative_examples_retained[h10]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_focus_failures_and_negative_examples_retained[h05]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_focus_failures_and_negative_examples_retained[h06]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_focus_failures_and_negative_examples_retained[h07]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_focus_failures_and_negative_examples_retained[q13]",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      },
+      {
+        "node": "tests.test_rag_fusion_replay::test_alternatives_do_not_meet_original_thresholds",
+        "status": "error",
+        "evidence": "backend-baseline.xml"
+      }
+    ]
+  },
+  "rag_batch2_guarded": {
+    "counts": {
+      "passed": 51,
+      "failure": 0,
+      "error": 0,
+      "skipped": 0
+    },
+    "skipped_cases": [],
+    "failed_cases": []
+  },
+  "landlock_forensics": {
+    "passed": 24,
+    "evidence": "forensics-final.log"
+  },
+  "mysql_chroma": {
+    "passed": 13,
+    "evidence": "mysql-memory-pytest.log",
+    "overlaps_host_skips": "test_agent_memory_core.py"
+  },
+  "specialist": {
+    "passed": 149,
+    "evidence": "backend-specialist.xml",
+    "counted_in_total": false
+  },
+  "dependency_recheck": {
+    "passed": 93,
+    "evidence": "dependency-recheck.xml",
+    "counted_in_total": false
+  },
+  "combined_disjoint_results": {
+    "passed": 1674,
+    "failure": 0,
+    "error": 0,
+    "skipped": 12
+  },
+  "mysql_host_skip_replaced_count": 13
+}

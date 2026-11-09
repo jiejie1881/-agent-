@@ -1,0 +1,45 @@
+{
+  "denied": [
+    "write_outside_workspace",
+    "write_outside_workspace",
+    "write_outside_workspace",
+    "write_outside_workspace",
+    "write_outside_workspace",
+    "network",
+    "network",
+    "network",
+    "child_process",
+    "native_provider_import:chromadb",
+    "native_provider_import:pymysql",
+    "child_process",
+    "child_process",
+    "child_process"
+  ],
+  "no_SQL": true,
+  "no_network": true,
+  "no_child_processes": true,
+  "native_chroma": "NOT RUN",
+  "vector": "Python memory protocol",
+  "diagnostics": [
+    {
+      "stage": "pointer_read",
+      "type": "FileNotFoundError",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\docs\\evidence\\agent-v21-final-closure-20261109\\strict_batch2_final_worker.py\", line 50, in safe_read\n    try:return original_read(path)\n               ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\backend\\app\\rag\\versioned_index.py\", line 66, in read_text_shared\n    raise ctypes.WinError(ctypes.get_last_error())\nFileNotFoundError: [WinError 2] \u7cfb\u7edf\u627e\u4e0d\u5230\u6307\u5b9a\u7684\u6587\u4ef6\u3002\n"
+    },
+    {
+      "stage": "manifest_read",
+      "type": "FileNotFoundError",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\docs\\evidence\\agent-v21-final-closure-20261109\\strict_batch2_final_worker.py\", line 56, in manifest_read\n    try:return original_manifest(self,path)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\backend\\app\\rag\\versioned_index.py\", line 253, in _read\n    manifest = json.loads(read_text_shared(path))\n                          ^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\docs\\evidence\\agent-v21-final-closure-20261109\\strict_batch2_final_worker.py\", line 50, in safe_read\n    try:return original_read(path)\n               ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\backend\\app\\rag\\versioned_index.py\", line 66, in read_text_shared\n    raise ctypes.WinError(ctypes.get_last_error())\nFileNotFoundError: [WinError 2] \u7cfb\u7edf\u627e\u4e0d\u5230\u6307\u5b9a\u7684\u6587\u4ef6\u3002\n"
+    },
+    {
+      "stage": "pointer_read",
+      "type": "UnicodeDecodeError",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\docs\\evidence\\agent-v21-final-closure-20261109\\strict_batch2_final_worker.py\", line 50, in safe_read\n    try:return original_read(path)\n               ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\backend\\app\\rag\\versioned_index.py\", line 81, in read_text_shared\n    return stream.read()\n           ^^^^^^^^^^^^^\n  File \"<frozen codecs>\", line 322, in decode\nUnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\n"
+    },
+    {
+      "stage": "pointer_read",
+      "type": "ValueError",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\docs\\evidence\\agent-v21-final-closure-20261109\\strict_batch2_final_worker.py\", line 50, in safe_read\n    try:return original_read(path)\n               ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\backend\\app\\rag\\versioned_index.py\", line 73, in read_text_shared\n    stream = os.fdopen(fd, \"r\", encoding=\"utf-8\")\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\34655\\Documents\\ChatGPT\\\u7269\u6d41\u7ba1\u7406\u9879\u76ee\\.closure-v21-20261109\\backend\\tests\\test_rag_batch2_pointer.py\", line 258, in failed_open\n    raise ValueError(\"synthetic descriptor conversion failure\")\nValueError: synthetic descriptor conversion failure\n"
+    }
+  ]
+}

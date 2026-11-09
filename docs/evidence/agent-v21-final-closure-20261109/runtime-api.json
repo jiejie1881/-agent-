@@ -1,0 +1,12 @@
+{
+  "api_version": "0.1.0",
+  "stream_path": true,
+  "cancel_path": true,
+  "readiness": {
+    "status": "ready",
+    "database": "available"
+  },
+  "health": {
+    "status": "ok"
+  }
+}
