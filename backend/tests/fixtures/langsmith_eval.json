@@ -1,0 +1,5 @@
+[
+  {"id":"LS-NORMAL-001","scenario":"normal","synthetic_input":"匿名门店上午200kg，小型面包车500kg且司机出勤、线路地形许可有效","expected_constraints":["载重不超过500kg","司机出勤有效","地形许可有效"],"expected_status":"SUCCESS","expected_calls":1},
+  {"id":"LS-OVERLOAD-001","scenario":"overweight","synthetic_input":"匿名门店上午600kg，候选错误地交给最大500kg的小型面包车","expected_constraints":["不得发布超载候选","确定性校验必须拒绝"],"expected_status":"REJECTED","expected_calls":1},
+  {"id":"LS-TERRAIN-001","scenario":"terrain_replan","synthetic_input":"初始选择无地形许可的大型面包车，纠错改用有许可的原小型面包车承运200kg","expected_constraints":["无地形许可候选被拒绝","纠错不能修改许可","改用已具备许可的车辆"],"expected_status":"SUCCESS","expected_calls":2}
+]

@@ -1,0 +1,15 @@
+<view class="page">
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+  <view wx:if="{{stop}}" class="card store-card"><view class="title">{{stop.store_name}}</view><view class="subtle">{{stop.address}}</view></view>
+  <view class="card form-card">
+    <view wx:if="{{replacesProofId}}" class="subtle">补传被驳回的照片，不改变原签收信息和配送状态。</view>
+    <block wx:if="{{!replacesProofId}}">
+    <view class="label">签收人姓名 <text>*</text></view><input class="input" value="{{receiverName}}" maxlength="100" placeholder="请输入签收人" bindinput="onName" />
+    <view class="label">联系电话</view><input class="input" value="{{receiverPhone}}" maxlength="30" type="number" placeholder="选填" bindinput="onPhone" />
+    <view class="label">备注</view><textarea class="textarea" value="{{remark}}" maxlength="1000" placeholder="货物状态、交接说明等" bindinput="onRemark" />
+    </block>
+    <view class="label">配送回单（最多3张）</view>
+    <view wx:if="{{stop}}" class="media-list"><image wx:for="{{stop.proofs}}" wx:key="id" class="media" src="{{item.full_url}}" mode="aspectFill" /><view wx:for="{{media}}" wx:key="*this" class="media-wrap"><image class="media" src="{{item}}" mode="aspectFill" /><view class="remove" data-index="{{index}}" bindtap="removeMedia">×</view></view><view wx:if="{{replacesProofId ? media.length < 1 : activeProofCount + media.length < 3}}" class="media add" bindtap="chooseMedia">＋<text>照片</text></view></view>
+  </view>
+  <button class="primary-button submit" loading="{{submitting}}" disabled="{{submitting || !stop}}" bindtap="submit">{{replacesProofId ? '确认补传' : '确认签收'}}</button>
+</view>

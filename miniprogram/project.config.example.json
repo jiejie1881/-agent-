@@ -1,0 +1,9 @@
+{
+  "description": "物流派车系统司机端",
+  "compileType": "miniprogram",
+  "libVersion": "3.6.5",
+  "appid": "touristappid",
+  "projectname": "logistics-driver",
+  "miniprogramRoot": "./",
+  "setting": { "urlCheck": false, "es6": true, "postcss": true, "minified": true }
+}

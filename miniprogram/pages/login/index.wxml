@@ -1,0 +1,12 @@
+<view class="login-page">
+  <view class="brand">物流司机端</view>
+  <view class="subtitle">查看任务、执行配送、完成交付</view>
+  <view class="login-card">
+    <view wx:if="{{error}}" class="error">{{error}}</view>
+    <view class="label">司机账号</view>
+    <input class="input" value="{{username}}" placeholder="请输入账号" bindinput="onUsername" />
+    <view class="label">密码</view>
+    <input class="input" value="{{password}}" password placeholder="请输入密码" bindinput="onPassword" />
+    <button class="primary-button login-button" loading="{{loading}}" disabled="{{loading}}" bindtap="submit">登录</button>
+  </view>
+</view>

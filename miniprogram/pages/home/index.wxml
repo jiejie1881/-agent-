@@ -1,0 +1,19 @@
+<view class="page">
+  <view class="hero">
+    <view><view class="greeting">你好，{{profile.username || '司机'}}</view><view class="vehicle">{{today}} · {{profile.vehicle ? profile.vehicle.plate_number + ' · ' + profile.vehicle.vehicle_type_name : '暂未绑定车辆'}}</view></view>
+    <view class="count">{{tasks.length}}<text> 趟</text></view>
+  </view>
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+  <view wx:if="{{profile}}" class="card">
+    <view class="section-title">今日实际驾驶车辆</view>
+    <view wx:if="{{!profile.today_schedules.length}}">暂无实际排班，请联系调度员</view>
+    <view wx:for="{{profile.today_schedules}}" wx:key="id" class="meta">{{item.period === 'MORNING' ? '上午' : '下午'}} · {{item.vehicle.plate_number}} · {{item.kind === 'SUBSTITUTE' ? '临时代班' : '正常排班'}}<view wx:if="{{item.conflict}}" class="error">{{item.conflict}}</view></view>
+  </view>
+  <view class="section-title">今日任务</view>
+  <view wx:if="{{!loading && !tasks.length}}" class="empty">今天暂无配送任务</view>
+  <view wx:for="{{tasks}}" wx:key="id" class="card task-card" data-id="{{item.id}}" bindtap="openTask">
+    <view class="row"><view class="route">{{item.route.name}}</view><view class="status">{{item.status}}</view></view>
+    <view class="meta">{{item.period === 'MORNING' ? '上午' : '下午'}} · 第 {{item.trip_no}} 趟 · {{item.stop_count}} 个门店 · {{item.highest_priority}}</view>
+    <view class="load">总载重 {{item.total_load}}</view>
+  </view>
+</view>

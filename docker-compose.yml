@@ -1,0 +1,136 @@
+name: logistics-dispatch
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?MYSQL_DATABASE is required}
+      MYSQL_USER: ${MYSQL_USER:?MYSQL_USER is required}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot --password=\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      JWT_REFRESH_TOKEN_EXPIRE_DAYS: ${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      SQL_ECHO: ${SQL_ECHO:-false}
+      BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Shanghai}
+      QUALITY_LOAD_TARGET: ${QUALITY_LOAD_TARGET:-0.8}
+      AGENT_PROVIDER: ${AGENT_PROVIDER:-}
+      AGENT_MODEL: ${AGENT_MODEL:-}
+      AGENT_API_KEY: ${AGENT_API_KEY:-}
+      AGENT_BASE_URL: ${AGENT_BASE_URL:-}
+      AGENT_TIMEOUT: ${AGENT_TIMEOUT:-30}
+      AGENT_MAX_TOOL_CALLS: ${AGENT_MAX_TOOL_CALLS:-5}
+      AGENT_DISPATCH_SHADOW_ENABLED: ${AGENT_DISPATCH_SHADOW_ENABLED:-false}
+      AGENT_DRAFT_ACCEPT_ENABLED: ${AGENT_DRAFT_ACCEPT_ENABLED:-false}
+      AGENT_DRAFT_ACCEPT_ADMIN_ENABLED: ${AGENT_DRAFT_ACCEPT_ADMIN_ENABLED:-false}
+      AGENT_DRAFT_ACCEPT_DISPATCHER_ENABLED: ${AGENT_DRAFT_ACCEPT_DISPATCHER_ENABLED:-false}
+      AGENT_PLAN_PUBLISH_ENABLED: ${AGENT_PLAN_PUBLISH_ENABLED:-false}
+      AGENT_PLAN_PUBLISH_ADMIN_ENABLED: ${AGENT_PLAN_PUBLISH_ADMIN_ENABLED:-false}
+      AGENT_PLAN_PUBLISH_DISPATCHER_ENABLED: ${AGENT_PLAN_PUBLISH_DISPATCHER_ENABLED:-false}
+      AGENT_DRAFT_RECEIPT_SECRET: ${AGENT_DRAFT_RECEIPT_SECRET:-}
+      AGENT_DRAFT_RECEIPT_TTL_SECONDS: ${AGENT_DRAFT_RECEIPT_TTL_SECONDS:-300}
+      AGENT_DRAFT_RECEIPT_KEY_VERSION: ${AGENT_DRAFT_RECEIPT_KEY_VERSION:-1}
+      AGENT_PUBLISH_RECEIPT_TTL_SECONDS: ${AGENT_PUBLISH_RECEIPT_TTL_SECONDS:-300}
+      AGENT_DISPATCH_SHADOW_MAX_REVISIONS: ${AGENT_DISPATCH_SHADOW_MAX_REVISIONS:-2}
+      AGENT_DISPATCH_SHADOW_TIMEOUT: ${AGENT_DISPATCH_SHADOW_TIMEOUT:-90}
+      AGENT_DISPATCH_SHADOW_MAX_INPUT_BYTES: ${AGENT_DISPATCH_SHADOW_MAX_INPUT_BYTES:-100000}
+      AGENT_DISPATCH_SHADOW_MAX_OUTPUT_BYTES: ${AGENT_DISPATCH_SHADOW_MAX_OUTPUT_BYTES:-50000}
+      AGENT_DISPATCH_SHADOW_OUTPUT_TOKENS: ${AGENT_DISPATCH_SHADOW_OUTPUT_TOKENS:-4096}
+      AGENT_DISPATCH_SHADOW_TOKEN_BUDGET: ${AGENT_DISPATCH_SHADOW_TOKEN_BUDGET:-100000}
+      AGENT_DISPATCH_SHADOW_MAX_COST: ${AGENT_DISPATCH_SHADOW_MAX_COST:-}
+      AGENT_DISPATCH_SHADOW_INPUT_PRICE_PER_MILLION: ${AGENT_DISPATCH_SHADOW_INPUT_PRICE_PER_MILLION:-}
+      AGENT_DISPATCH_SHADOW_OUTPUT_PRICE_PER_MILLION: ${AGENT_DISPATCH_SHADOW_OUTPUT_PRICE_PER_MILLION:-}
+      AGENT_DISPATCH_SHADOW_COST_CURRENCY: ${AGENT_DISPATCH_SHADOW_COST_CURRENCY:-}
+      AGENT_PENDING_ACTION_EXPIRE_MINUTES: ${AGENT_PENDING_ACTION_EXPIRE_MINUTES:-15}
+      AGENT_HISTORY_MAX_MESSAGES: ${AGENT_HISTORY_MAX_MESSAGES:-20}
+      AGENT_CHECKPOINT_PATH: /app/agent_data/checkpoints.sqlite3
+      AGENT_MEMORY_ENABLED: ${AGENT_MEMORY_ENABLED:-false}
+      AGENT_MEMORY_VECTOR_DIR: /app/agent_data/memory_chroma
+      UPLOAD_ROOT: ${UPLOAD_ROOT:-/app/uploads}
+      DELIVERY_PROOF_MAX_BYTES: ${DELIVERY_PROOF_MAX_BYTES:-5242880}
+      RAG_EMBEDDING_PROVIDER: ${RAG_EMBEDDING_PROVIDER:-}
+      RAG_EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-}
+      RAG_EMBEDDING_API_KEY: ${RAG_EMBEDDING_API_KEY:-}
+      RAG_EMBEDDING_BASE_URL: ${RAG_EMBEDDING_BASE_URL:-}
+      RAG_EMBEDDING_TIMEOUT: ${RAG_EMBEDDING_TIMEOUT:-30}
+      RAG_KNOWLEDGE_BASE_DIR: ${RAG_KNOWLEDGE_BASE_DIR:-/app/knowledge_base}
+      RAG_VECTOR_STORE_DIR: ${RAG_VECTOR_STORE_DIR:-/app/rag_data/chroma}
+      RAG_COLLECTION_NAME: ${RAG_COLLECTION_NAME:-logistics_knowledge}
+      RAG_CHUNK_SIZE: ${RAG_CHUNK_SIZE:-800}
+      RAG_CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-120}
+      RAG_DEFAULT_TOP_K: ${RAG_DEFAULT_TOP_K:-4}
+      RAG_RETRIEVAL_MODE: ${RAG_RETRIEVAL_MODE:-vector}
+      RAG_VECTOR_CANDIDATES: ${RAG_VECTOR_CANDIDATES:-20}
+      RAG_BM25_CANDIDATES: ${RAG_BM25_CANDIDATES:-20}
+      RAG_RRF_K: ${RAG_RRF_K:-60}
+      RAG_RERANKER_ENABLED: ${RAG_RERANKER_ENABLED:-false}
+      RAG_RERANKER_MODEL_PATH: ${RAG_RERANKER_MODEL_PATH:-}
+      RAG_RERANKER_TIMEOUT: ${RAG_RERANKER_TIMEOUT:-10}
+      RAG_RERANKER_CANDIDATE_K: ${RAG_RERANKER_CANDIDATE_K:-20}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - delivery_proofs:/app/uploads
+      - rag_data:/app/rag_data
+      - agent_checkpoints:/app/agent_data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+        VITE_MAP_TILE_URL: ${VITE_MAP_TILE_URL:-}
+        VITE_MAP_ATTRIBUTION: ${VITE_MAP_ATTRIBUTION:-}
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  mysql_data:
+  delivery_proofs:
+  rag_data:
+  agent_checkpoints:

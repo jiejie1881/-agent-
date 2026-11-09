@@ -1,0 +1,1 @@
+.filters { display: flex; align-items: center; justify-content: space-between; }.date-row { display: flex; align-items: center; gap: 14rpx; }.date-input { min-width: 180rpx; padding: 14rpx; border-radius: 10rpx; background: #f2f5f9; color: #52616f; font-size: 24rpx; }.history-meta { margin-top: 16rpx; }.loading { padding: 30rpx; text-align: center; color: #8993a4; }

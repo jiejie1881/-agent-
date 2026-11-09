@@ -1,0 +1,27 @@
+<view class="page" wx:if="{{task}}">
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+  <view class="card header-card"><view class="row"><view class="title">{{task.route.name}}</view><view class="status">{{task.status}}</view></view><view class="grid"><view><text>车辆</text><strong>{{task.vehicle.plate_number}}</strong></view><view><text>时段</text><strong>{{task.period === 'MORNING' ? '上午' : '下午'}}</strong></view><view><text>趟次</text><strong>第 {{task.trip_no}} 趟</strong></view><view><text>载重</text><strong>{{task.total_load}}</strong></view></view><button class="route-button" bindtap="openRoute">查看配送路线</button></view>
+  <view class="section-title">门店顺序</view>
+  <view wx:for="{{task.stops}}" wx:key="delivery_demand_id" class="card stop">
+    <view class="number">{{item.sequence}}</view>
+    <view class="stop-body">
+      <view class="row"><view class="stop-name">{{item.store_name}}</view><view class="stop-status status-{{item.delivery_status}}">{{item.delivery_status === 'PENDING' ? '待配送' : item.delivery_status === 'ARRIVED' ? '已到店' : item.delivery_status === 'SIGNED' ? '已签收' : '配送失败'}}</view></view>
+      <view class="subtle">{{item.address || '未填写地址'}}</view>
+      <view class="goods">货量 {{item.quantity}} kg · {{item.priority}}</view>
+      <view wx:if="{{item.delivery_status === 'SIGNED'}}" class="result-info">签收人：{{item.receiver_name}}<text wx:if="{{item.signed_at}}"> · {{item.signed_at}}</text></view>
+      <view wx:if="{{item.delivery_status === 'FAILED'}}" class="result-info failed">原因：{{item.failure_reason}}<text wx:if="{{item.driver_remark}}"> · {{item.driver_remark}}</text></view>
+      <view wx:if="{{item.proofs.length}}" class="proofs">
+        <view wx:for="{{item.proofs}}" wx:for-item="proof" wx:key="id">
+          <image wx:if="{{proof.full_url}}" class="proof" src="{{proof.full_url}}" mode="aspectFill" data-current="{{proof.full_url}}" data-urls="{{item.proof_urls}}" bindtap="previewProof" />
+          <view wx:else class="subtle">{{proof.image_error || '图片加载中'}}</view>
+          <view class="subtle">{{proof.review_label}}{{proof.historical ? '（历史原件）' : ''}}</view>
+          <view wx:if="{{proof.review_reason}}" class="failed">{{proof.review_reason}}</view>
+          <button wx:if="{{item.delivery_status === 'SIGNED' && proof.review_status === 'REJECTED' && !proof.historical && (task.status === 'DELIVERING' || task.status === 'COMPLETED')}}" size="mini" type="primary" data-stop-id="{{item.id}}" data-proof-id="{{proof.id}}" bindtap="resubmitProof">补传回单</button>
+        </view>
+      </view>
+      <view wx:if="{{task.status === 'DELIVERING'}}" class="stop-actions"><block wx:if="{{item.delivery_status === 'PENDING'}}"><button size="mini" type="primary" loading="{{operating}}" data-stop-id="{{item.id}}" bindtap="arrive">到店</button><button size="mini" type="warn" data-stop-id="{{item.id}}" bindtap="openFail">配送异常</button></block><block wx:elif="{{item.delivery_status === 'ARRIVED'}}"><button size="mini" type="primary" data-stop-id="{{item.id}}" bindtap="openSign">签收</button><button size="mini" type="warn" data-stop-id="{{item.id}}" bindtap="openFail">配送异常</button></block></view>
+    </view>
+  </view>
+  <view class="action-bar"><button wx:if="{{task.status === 'PUBLISHED'}}" class="primary-button" loading="{{operating}}" disabled="{{operating}}" data-action="start" bindtap="perform">开始配送</button><view wx:elif="{{task.status === 'DELIVERING'}}"><view wx:if="{{unprocessedCount > 0}}" class="pending-tip">还有 {{unprocessedCount}} 个门店未处理</view><button class="primary-button" loading="{{operating}}" disabled="{{operating || !canComplete}}" data-action="complete" bindtap="perform">完成配送</button></view><view wx:else class="readonly">{{task.status === 'COMPLETED' ? '本趟配送已完成' : '当前任务状态不可操作'}}</view></view>
+</view>
+<view wx:elif="{{error}}" class="page"><view class="error">{{error}}</view></view>

@@ -1,0 +1,52 @@
+<view class="page personal-center">
+  <view class="card profile-card">
+    <view class="avatar">司</view>
+    <view class="name">{{profile ? (profile.display_name || profile.username) : '司机个人中心'}}</view>
+    <view class="role">司机姓名：{{profile.display_name || '暂未提供'}}</view>
+    <view class="role">登录账号：{{profile ? profile.username : '等待加载'}}</view>
+    <view class="status">{{loggedIn ? '已登录' : '未登录'}}</view>
+  </view>
+  <view wx:if="{{loading}}" class="card feedback">正在加载司机资料…</view>
+  <view wx:elif="{{error}}" class="card">
+    <view class="error">{{error}}</view>
+    <button class="primary-button" bindtap="load">重新加载资料</button>
+  </view>
+  <view wx:elif="{{!profile}}" class="card feedback">
+    <view>暂未获取到司机资料</view>
+    <button bindtap="load">重试</button>
+  </view>
+  <view wx:else class="card">
+    <view class="section-title">默认车辆（不等于实际排班）</view>
+    <block wx:if="{{profile.vehicle}}">
+      <view class="item"><text>车牌号</text><text class="value">{{profile.vehicle.plate_number}}</text></view>
+      <view class="item"><text>车辆编码</text><text class="value">{{profile.vehicle.code}}</text></view>
+      <view class="item"><text>车辆类型</text><text class="value">{{profile.vehicle.vehicle_type_name}}</text></view>
+    </block>
+    <view wx:else class="warning">暂未绑定车辆，请联系管理员。</view>
+  </view>
+  <view wx:if="{{profile}}" class="card">
+    <view class="section-title">今日实际排班</view>
+    <view wx:if="{{!profile.today_schedules.length}}" class="warning">今日暂未安排实际车辆</view>
+    <view wx:for="{{profile.today_schedules}}" wx:key="id" class="item">
+      <view>{{item.period === 'MORNING' ? '上午' : '下午'}} · {{item.vehicle.plate_number}}<view class="role">{{item.vehicle.vehicle_type_name}}</view></view>
+      <view><view class="status">{{item.kind === 'SUBSTITUTE' ? '临时代班' : '正常排班'}}</view><view wx:if="{{item.conflict}}" class="error">{{item.conflict}}</view></view>
+    </view>
+  </view>
+  <view class="card shortcuts">
+    <view class="section-title">常用功能</view>
+    <button bindtap="openHistory">配送历史 <text class="arrow">›</text></button>
+    <button loading="{{openingLeave}}" disabled="{{openingLeave}}" bindtap="openLeave">请假管理 <text class="arrow">›</text></button>
+    <view wx:if="{{leaveNavigationError}}" class="error">{{leaveNavigationError}}</view>
+    <button bindtap="showAbout">关于系统 <text class="arrow">›</text></button>
+  </view>
+  <button class="danger-button logout" disabled="{{confirming}}" bindtap="logout">退出登录</button>
+  <view wx:if="{{logoutFallback}}" class="card logout-confirm">
+    <view class="section-title">确认退出登录？</view>
+    <view class="error">{{logoutError}}</view>
+    <view class="confirm-actions">
+      <button bindtap="cancelLogout">取消</button>
+      <button class="danger-button" bindtap="confirmLogout">确认退出</button>
+    </view>
+  </view>
+  <view class="footer">安全退出仅清除本系统登录信息</view>
+</view>

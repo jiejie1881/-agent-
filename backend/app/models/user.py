@@ -1,0 +1,47 @@
+from sqlalchemy import Boolean, Enum, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.domain.enums import UserRole
+from app.infrastructure.database.base import Base
+from app.models.mixins import TimestampMixin
+
+
+class User(TimestampMixin, Base):
+    __tablename__ = "users"
+    # Migration 010 deliberately contains both this constraint and a unique index.
+    __table_args__ = (UniqueConstraint("username", name="uq_users_username"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    display_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(
+            UserRole,
+            native_enum=False,
+            create_constraint=True,
+            validate_strings=True,
+            name="user_role",
+        ),
+        nullable=False,
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    token_version: Mapped[int] = mapped_column(default=0, nullable=False)
+    assigned_vehicle: Mapped["Vehicle | None"] = relationship(
+        back_populates="driver", uselist=False
+    )
+    agent_conversations: Mapped[list["AgentConversation"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    agent_pending_actions: Mapped[list["AgentPendingAction"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+from app.models.agent_conversation import AgentConversation  # noqa: E402
+from app.models.agent_pending_action import AgentPendingAction  # noqa: E402
+from app.models.vehicle import Vehicle  # noqa: E402
