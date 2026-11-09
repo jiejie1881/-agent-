@@ -7,7 +7,6 @@ from pathlib import Path
 from app.rag.exceptions import KnowledgeDocumentError
 from app.rag.schemas import KnowledgeSection
 
-
 DOCUMENT_TYPES = {
     "dispatch_rules": "dispatch_rule",
     "cold_chain_rules": "cold_chain",
@@ -30,7 +29,9 @@ class KnowledgeDocumentLoader:
                 try:
                     sections.extend(self.load_file(path))
                 except KnowledgeDocumentError as exc:
-                    logger.warning("Skipping invalid knowledge document %s: %s", path.name, exc)
+                    logger.warning(
+                        "Skipping invalid knowledge document %s: %s", path.name, exc
+                    )
         if not sections:
             raise KnowledgeDocumentError("知识库目录中没有可用的 Markdown 或 TXT 文档")
         return sections
@@ -38,11 +39,15 @@ class KnowledgeDocumentLoader:
     def load_file(self, path: str | Path) -> list[KnowledgeSection]:
         document_path = Path(path)
         if document_path.suffix.lower() not in SUPPORTED_SUFFIXES:
-            raise KnowledgeDocumentError(f"不支持的知识文档格式：{document_path.suffix}")
+            raise KnowledgeDocumentError(
+                f"不支持的知识文档格式：{document_path.suffix}"
+            )
         try:
             text = document_path.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as exc:
-            raise KnowledgeDocumentError(f"无法读取知识文档：{document_path.name}") from exc
+            raise KnowledgeDocumentError(
+                f"无法读取知识文档：{document_path.name}"
+            ) from exc
         text = self._clean(text)
         if not text:
             raise KnowledgeDocumentError(f"知识文档为空：{document_path.name}")
@@ -88,6 +93,7 @@ class KnowledgeDocumentLoader:
             content=content,
             source=path.name,
             document_name=path.stem,
+            document_id=path.name,
             document_type=document_type,
             section=heading,
         )

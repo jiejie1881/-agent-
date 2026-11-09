@@ -2,7 +2,7 @@
 // 避免把某位开发者的局域网地址或虚构的生产域名写进业务代码。
 const ACTIVE_ENV = 'dev'
 const ENVIRONMENTS = {
-  dev: { serverBaseUrl: 'http://127.0.0.1:8000' },
+  dev: { serverBaseUrl: 'http://127.0.0.1:62112' },
   lan: { serverBaseUrl: '' },
   prod: { serverBaseUrl: '' }
 }

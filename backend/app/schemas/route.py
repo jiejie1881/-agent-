@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -11,6 +12,12 @@ class RouteBase(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     description: str | None = Field(default=None, max_length=500)
     is_active: bool = True
+    start_address: str | None = Field(default=None, max_length=255)
+    end_address: str | None = Field(default=None, max_length=255)
+    geographic_notes: str | None = Field(default=None, max_length=2000)
+    distance_km: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
+    duration_minutes: int | None = Field(default=None, ge=0, le=100000)
+    route_data_source: str | None = Field(default=None, max_length=100)
 
     @field_validator("code", "name", mode="before")
     @classmethod
@@ -36,6 +43,12 @@ class RouteUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     description: str | None = Field(default=None, max_length=500)
     is_active: bool | None = None
+    start_address: str | None = Field(default=None, max_length=255)
+    end_address: str | None = Field(default=None, max_length=255)
+    geographic_notes: str | None = Field(default=None, max_length=2000)
+    distance_km: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
+    duration_minutes: int | None = Field(default=None, ge=0, le=100000)
+    route_data_source: str | None = Field(default=None, max_length=100)
 
     @field_validator("code", "name", mode="before")
     @classmethod

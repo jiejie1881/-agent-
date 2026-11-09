@@ -64,6 +64,7 @@ const activeMenu = computed(() => {
 
         <el-sub-menu index="operations">
           <template #title><el-icon><Calendar /></el-icon><span>每日运营</span></template>
+          <el-menu-item v-if="authStore.canOperate" index="/operations/imports"><el-icon><Tickets /></el-icon><span>业务数据导入</span></el-menu-item>
           <el-menu-item index="/operations/vehicle-attendances"><el-icon><Tickets /></el-icon><span>车辆出勤</span></el-menu-item>
           <el-menu-item index="/operations/drivers"><el-icon><UserFilled /></el-icon><span>司机与排班</span></el-menu-item>
           <el-menu-item index="/operations/leave-approval"><el-icon><DocumentChecked /></el-icon><span>请假审批</span></el-menu-item>
@@ -77,16 +78,20 @@ const activeMenu = computed(() => {
           <el-menu-item index="/dispatch/plans"><el-icon><Tickets /></el-icon><span>方案列表</span></el-menu-item>
           <el-menu-item index="/dispatch/quality"><el-icon><DataAnalysis /></el-icon><span>调度质量报告</span></el-menu-item>
           <el-menu-item index="/dispatch/exceptions"><el-icon><DocumentChecked /></el-icon><span>每日异常</span></el-menu-item>
+          <el-menu-item v-if="authStore.canOperate" index="/dispatch/exception-cases"><el-icon><DocumentChecked /></el-icon><span>异常处理工单</span></el-menu-item>
         </el-sub-menu>
 
+        <el-menu-item index="/agent/memories">我的长期记忆</el-menu-item>
         <el-menu-item index="/agent">
           <el-icon><ChatDotRound /></el-icon><span>智能调度助手</span>
         </el-menu-item>
+        <el-menu-item v-if="authStore.canOperate" index="/agent-dispatch/business"><el-icon><DataAnalysis /></el-icon><span>Agent智能派车</span></el-menu-item>
 
         <el-sub-menu v-if="authStore.user?.role === 'ADMIN'" index="system">
           <template #title><el-icon><UserFilled /></el-icon><span>系统管理</span></template>
           <el-menu-item index="/system/users"><el-icon><UserFilled /></el-icon><span>用户与权限</span></el-menu-item>
           <el-menu-item index="/system/audit-logs"><el-icon><DocumentChecked /></el-icon><span>审计日志</span></el-menu-item>
+          <el-menu-item index="/system/knowledge"><el-icon><DocumentChecked /></el-icon><span>知识治理</span></el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-scrollbar>

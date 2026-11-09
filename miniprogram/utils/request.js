@@ -13,9 +13,11 @@ function request(options) {
     wx.request({
       url: API_BASE_URL + options.url,
       method: options.method || 'GET',
+      timeout: 30000,
       data: options.data || {},
       header: Object.assign(
         { 'content-type': 'application/json' },
+        options.header || {},
         token ? { Authorization: 'Bearer ' + token } : {}
       ),
       success(response) {

@@ -43,6 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
     try {
       user.value = (await getCurrentUser()).data
+      if (user.value.role === 'DRIVER') logout()
     } catch {
       logout()
     } finally {

@@ -61,7 +61,7 @@ class DriverSchedulingService:
     def resolve(self, day, period, vehicle_id, *, for_update=True):
         # 展示可用性不申请写锁；业务动作仍默认加锁并重新校验。
         vehicle = self.repository.lock_vehicle(vehicle_id, for_update=for_update)
-        if not vehicle or not vehicle.is_active:
+        if not vehicle or not vehicle.is_active or vehicle.operating_status != 'ACTIVE':
             raise BusinessError("车辆已停用或不存在", 409, "VEHICLE_INACTIVE")
         if not vehicle.vehicle_type.is_active:
             raise BusinessError("车型已停用", 409, "VEHICLE_TYPE_INACTIVE")

@@ -8,13 +8,22 @@ Page({
     if (!auth.ensureLogin()) return
     await this.refreshStop()
   },
+  onShow() {
+    if (this._sessionVersion !== undefined && this._sessionVersion !== auth.getSessionVersion()) {
+      this.setData({ stop: null, activeProofCount: 0, receiverName: '', receiverPhone: '', remark: '', media: [], error: '登录状态已变化，请重新打开任务' })
+      this._sessionChanged = true
+    }
+    auth.ensureLogin()
+  },
   async refreshStop() {
     const version = auth.getSessionVersion()
+    this._sessionVersion = version
+    this.setData({ stop: null, activeProofCount: 0 })
     try {
       const stop = await service.hydrateProofs(await service.getStop(this.data.taskId, this.data.stopId))
       if (version !== auth.getSessionVersion()) return
       this.setData({ stop: stop, activeProofCount: stop.proofs.filter(proof => !proof.historical).length })
-    } catch (error) { this.setData({ error: error.message }) }
+    } catch (error) { if (version === auth.getSessionVersion()) this.setData({ error: error.message }) }
   },
   onName(event) { this.setData({ receiverName: event.detail.value }) },
   onPhone(event) { this.setData({ receiverPhone: event.detail.value }) },
@@ -34,6 +43,10 @@ Page({
   async submit() {
     if (this.data.submitting) return
     if (!auth.ensureLogin()) return
+    if (this._sessionChanged || (this._sessionVersion !== undefined && this._sessionVersion !== auth.getSessionVersion())) {
+      this.onShow()
+      return
+    }
     if (!this.data.replacesProofId && !this.data.receiverName.trim()) { this.setData({ error: '请输入签收人姓名' }); return }
     if (this.data.replacesProofId && this.data.media.length !== 1) { this.setData({ error: '请选择1张补传照片' }); return }
     const version = auth.getSessionVersion()

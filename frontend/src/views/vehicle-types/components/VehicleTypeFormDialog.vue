@@ -2,18 +2,13 @@
 import type { FormInstance, FormRules } from 'element-plus'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 
-import type { VehicleType, VehicleTypeCode, VehicleTypePayload } from '@/types/vehicle'
+import type { VehicleType, VehicleTypePayload } from '@/types/vehicle'
 
 const props = defineProps<{ modelValue: boolean; vehicleType: VehicleType | null; submitting: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean]; submit: [VehicleTypePayload] }>()
 const formRef = ref<FormInstance>()
-const form = reactive<VehicleTypePayload>({ code: 'FOUR_METER', name: '', min_load: 1, max_load: 1, is_active: true })
+const form = reactive<VehicleTypePayload>({ code: '', name: '', min_load: 1, max_load: 1, is_active: true })
 const title = computed(() => (props.vehicleType ? '修改车型' : '新增车型'))
-const codeOptions: Array<{ value: VehicleTypeCode; label: string }> = [
-  { value: 'FOUR_METER', label: '四米二（FOUR_METER）' },
-  { value: 'BIG_VAN', label: '大包（BIG_VAN）' },
-  { value: 'SMALL_VAN', label: '小包（SMALL_VAN）' },
-]
 const rules: FormRules<VehicleTypePayload> = {
   code: [{ required: true, message: '请选择车型编码', trigger: 'change' }],
   name: [{ required: true, message: '请输入车型名称', trigger: 'blur' }, { max: 100, message: '名称不能超过100个字符', trigger: 'blur' }],
@@ -27,7 +22,7 @@ const rules: FormRules<VehicleTypePayload> = {
 watch(() => props.modelValue, (visible) => {
   if (!visible) return
   Object.assign(form, {
-    code: props.vehicleType?.code ?? 'FOUR_METER', name: props.vehicleType?.name ?? '',
+    code: props.vehicleType?.code ?? '', name: props.vehicleType?.name ?? '',
     min_load: Number(props.vehicleType?.min_load ?? 1), max_load: Number(props.vehicleType?.max_load ?? 1),
     is_active: props.vehicleType?.is_active ?? true,
   })
@@ -42,7 +37,7 @@ async function submit() {
 <template>
   <el-dialog :model-value="modelValue" :title="title" width="590px" destroy-on-close :close-on-click-modal="false" @update:model-value="emit('update:modelValue', $event)">
     <el-form ref="formRef" :model="form" :rules="rules" label-width="96px">
-      <el-form-item label="车型编码" prop="code"><el-select v-model="form.code" style="width: 100%"><el-option v-for="item in codeOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+      <el-form-item label="车型编码" prop="code"><el-input v-model="form.code" maxlength="50" placeholder="填写业务车型编码，字母、数字、下划线或短横线" /></el-form-item>
       <el-form-item label="车型名称" prop="name"><el-input v-model="form.name" maxlength="100" /></el-form-item>
       <div class="load-grid">
         <el-form-item label="最低载重" prop="min_load"><el-input-number v-model="form.min_load" :min="0.01" :precision="2" :step="1" controls-position="right" /></el-form-item>

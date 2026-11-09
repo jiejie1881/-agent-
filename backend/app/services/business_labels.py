@@ -15,8 +15,8 @@ def driver_label(key, name):
 
 def vehicle_label(vehicle):
     return {'id': vehicle.id, 'code': vehicle.code, 'plate_number': vehicle.plate_number,
-            'type_name': TYPE_NAMES.get(vehicle.vehicle_type.code.value, vehicle.vehicle_type.name),
-            'type_code': vehicle.vehicle_type.code.value, 'max_load': float(vehicle.vehicle_type.max_load),
+            'type_name': vehicle.vehicle_type.name,
+            'type_code': vehicle.vehicle_type.code, 'max_load': float(vehicle.vehicle_type.max_load),
             'is_active': vehicle.is_active}
 
 def quality_entities(plan, demands):

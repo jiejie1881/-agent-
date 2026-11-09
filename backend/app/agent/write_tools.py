@@ -1,12 +1,34 @@
 from typing import Any
 
 from app.agent.schemas.tool import CancelDispatchPlanArgs, MoveDeliveryDemandArgs
-from app.agent.tool_execution import AgentToolContext, AgentToolExecutor, AgentToolExecutorRegistry
+from app.agent.tool_execution import (
+    AgentToolContext,
+    AgentToolExecutor,
+    AgentToolExecutorRegistry,
+)
 from app.agent.tool_registry import AgentToolRegistry
+from app.core.config import get_settings
+from app.domain.enums import AgentPendingActionStatus, DispatchPlanStatus
+from app.domain.exceptions import ConflictError, PermissionDeniedError
+from app.domain.permissions import Permission, has_permission
+from app.models.agent_pending_action import AgentPendingAction
+from app.models.user import User
 from app.schemas.dispatch_plan import DispatchDemandMoveRequest
-from app.domain.enums import DispatchPlanStatus
-from app.domain.exceptions import ConflictError
 from app.services.dispatch_plan_service import DispatchPlanService
+
+
+def _authorize_write(service, context, name, arguments):
+    if not get_settings().agent_write_tools_enabled:
+        raise PermissionDeniedError("Agent当前为只读模式，写操作未启用")
+    actor = service.session.get(User, context.current_user.id, populate_existing=True)
+    if actor is None or not actor.is_active or not has_permission(actor.role, Permission.DISPATCH_WRITE):
+        raise PermissionDeniedError()
+    action = (service.session.get(AgentPendingAction, context.pending_action_id)
+              if context.pending_action_id is not None else None)
+    if (action is None or action.status != AgentPendingActionStatus.CONFIRMED
+            or action.user_id != actor.id or action.conversation_id != context.conversation_id
+            or action.tool_name != name or action.arguments != arguments.model_dump(mode="json")):
+        raise PermissionDeniedError("Agent写操作必须经过所属用户的人工确认")
 
 
 def _audit_context(context: AgentToolContext, tool_name: str) -> dict[str, object]:
@@ -27,6 +49,7 @@ class MoveDeliveryDemandTool(AgentToolExecutor[MoveDeliveryDemandArgs]):
         self.service = service
 
     def _execute(self, arguments: MoveDeliveryDemandArgs, context: AgentToolContext) -> dict[str, Any]:
+        _authorize_write(self.service, context, self.name, arguments)
         plan = self.service.move_demand(
             arguments.plan_id,
             DispatchDemandMoveRequest(
@@ -50,6 +73,7 @@ class CancelDispatchPlanTool(AgentToolExecutor[CancelDispatchPlanArgs]):
         self.service = service
 
     def _execute(self, arguments: CancelDispatchPlanArgs, context: AgentToolContext) -> dict[str, Any]:
+        _authorize_write(self.service, context, self.name, arguments)
         current = self.service.get(arguments.plan_id)
         if current.status == DispatchPlanStatus.CANCELLED:
             raise ConflictError("派车方案已经取消，待确认操作已失效")

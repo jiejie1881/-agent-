@@ -137,7 +137,7 @@ def test_direct_answer_calls_model_once_and_does_not_execute_tool(
     ]
     assert "未经用户在界面点击确认绝不会执行" in messages[0].content
     assert messages[1].content == "你好"
-    assert len(tools) == 9
+    assert len(tools) == 7
 
 
 def test_rag_question_uses_knowledge_tool(tool_context) -> None:

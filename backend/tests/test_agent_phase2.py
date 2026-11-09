@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import Sequence
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -25,6 +25,12 @@ from app.services.agent_pending_action_service import AgentPendingActionService
 from app.services.auth_service import AuthService
 from app.services.dispatch_plan_service import DispatchPlanService
 from tests.test_dispatch_plan_adjustment import generate_adjustable_plan
+
+
+@pytest.fixture(autouse=True)
+def opt_in_existing_write_contracts(monkeypatch):
+    from app.core.config import get_settings
+    monkeypatch.setattr(get_settings(), "agent_write_tools_enabled", True)
 
 
 class WriteCallModel(AgentModelClient):
@@ -158,7 +164,7 @@ def test_pending_action_enforces_user_conversation_and_expiration(client, sessio
     with pytest.raises(NotFoundError):
         service.cancel(conversation["id"], action.id, other)
 
-    action.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+    action.expires_at = datetime.now(UTC) - timedelta(seconds=1)
     session.commit()
     with pytest.raises(AgentPendingActionError) as expired:
         asyncio.run(service.confirm(conversation["id"], action.id, user))

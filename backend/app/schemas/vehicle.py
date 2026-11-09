@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -8,7 +9,7 @@ from app.schemas.terrain import TerrainResponse
 
 
 class VehicleTypeBase(BaseModel):
-    code: VehicleTypeCode
+    code: str = Field(min_length=1, max_length=50, pattern=r'^[A-Za-z0-9_-]+$')
     name: str = Field(min_length=1, max_length=100)
     min_load: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     max_load: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
@@ -40,7 +41,7 @@ class VehicleTypeCreate(VehicleTypeBase):
 
 
 class VehicleTypeUpdate(BaseModel):
-    code: VehicleTypeCode | None = None
+    code: str | None = Field(default=None, min_length=1, max_length=50, pattern=r'^[A-Za-z0-9_-]+$')
     name: str | None = Field(default=None, min_length=1, max_length=100)
     min_load: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
     max_load: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
@@ -71,6 +72,11 @@ class VehicleBase(BaseModel):
     vehicle_type_id: int = Field(gt=0)
     driver_user_id: int | None = Field(default=None, gt=0)
     is_active: bool = True
+    organization: str | None = Field(default=None, max_length=100)
+    rated_load: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
+    daily_trip_limit: int | None = Field(default=None, ge=1, le=100)
+    operating_status: Literal['ACTIVE', 'MAINTENANCE', 'RETIRED'] = 'ACTIVE'
+    allowed_route_ids: list[int] | None = Field(default=None, max_length=1000)
 
     @field_validator("code", "plate_number", mode="before")
     @classmethod
@@ -99,6 +105,11 @@ class VehicleUpdate(BaseModel):
     vehicle_type_id: int | None = Field(default=None, gt=0)
     driver_user_id: int | None = Field(default=None, gt=0)
     is_active: bool | None = None
+    organization: str | None = Field(default=None, max_length=100)
+    rated_load: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
+    daily_trip_limit: int | None = Field(default=None, ge=1, le=100)
+    operating_status: Literal['ACTIVE', 'MAINTENANCE', 'RETIRED'] | None = None
+    allowed_route_ids: list[int] | None = Field(default=None, max_length=1000)
 
     @field_validator("code", "plate_number", mode="before")
     @classmethod

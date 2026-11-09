@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { businessRef } from '@/utils/businessLabels'
 import { Edit, Link, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import { listRouteTerrainConfigs, listRoutes } from '@/api/routes'
 import {
@@ -18,6 +19,7 @@ import type { Store, StoreListItem, StorePayload, StoreRouteDisplay } from '@/ty
 import StoreFormDialog from '@/views/stores/components/StoreFormDialog.vue'
 import StoreRouteDialog from '@/views/stores/components/StoreRouteDialog.vue'
 import { useAuthStore } from '@/stores/auth'
+import {allPages} from '@/api/pagination'
 
 const authStore = useAuthStore()
 
@@ -27,21 +29,13 @@ const routeSaving = ref(false)
 const stores = ref<StoreListItem[]>([])
 const routes = ref<Route[]>([])
 const keyword = ref('')
+const offset = ref(0), pageSize = 50, activeFilter = ref<boolean|null>(null)
 
 const formVisible = ref(false)
 const editingStore = ref<Store | null>(null)
 const routeDialogVisible = ref(false)
 const routeStore = ref<StoreListItem | null>(null)
 
-const filteredStores = computed(() => {
-  const normalized = keyword.value.trim().toLowerCase()
-  if (!normalized) return stores.value
-  return stores.value.filter((store) =>
-    [store.code, store.name, store.address, store.contact_name, store.contact_phone]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(normalized)),
-  )
-})
 
 function today(): string {
   const date = new Date()
@@ -63,8 +57,8 @@ async function loadData() {
   loading.value = true
   try {
     const [storeResponse, routeResponse] = await Promise.all([
-      listStores({ offset: 0, limit: 100 }),
-      listRoutes({ offset: 0, limit: 100 }),
+      listStores({offset:offset.value,limit:pageSize,q:keyword.value || undefined,is_active:activeFilter.value ?? undefined}),
+      allPages(listRoutes),
     ])
     routes.value = routeResponse.data
 
@@ -198,6 +192,7 @@ async function saveStoreRoutes(nextRouteIds: number[]) {
 }
 
 onMounted(loadData)
+async function changePage(delta:number){offset.value=Math.max(0,offset.value+delta);await loadData()}
 </script>
 
 <template>
@@ -219,11 +214,15 @@ onMounted(loadData)
           clearable
           placeholder="搜索编码、名称、地址或联系人"
           class="toolbar__search"
+          @keyup.enter="offset=0;loadData()"
+          @clear="offset=0;loadData()"
         />
+        <el-select v-model="activeFilter" clearable placeholder="全部状态" @change="offset=0;loadData()"><el-option label="启用" :value="true" /><el-option label="停用" :value="false" /></el-select>
+        <el-button @click="offset=0;loadData()">查询</el-button>
         <el-button :icon="Refresh" :loading="loading" @click="loadData">刷新</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="filteredStores" row-key="id" stripe>
+      <el-table v-loading="loading" :data="stores" row-key="id" stripe>
         <template #empty>
           <el-empty :description="keyword ? '没有匹配的门店' : '暂无门店数据'" :image-size="92" />
         </template>
@@ -231,12 +230,13 @@ onMounted(loadData)
         <el-table-column label="门店" min-width="180" fixed="left">
           <template #default="{ row }">
             <div class="store-name">{{ row.name }}</div>
-            <div class="store-code">{{ row.code }}</div>
+            <div class="store-code">{{ businessRef('ST', row.id) }} · {{ row.code }}</div>
           </template>
         </el-table-column>
         <el-table-column prop="address" label="地址" min-width="210">
           <template #default="{ row }">{{ row.address || '—' }}</template>
         </el-table-column>
+        <el-table-column prop="delivery_region" label="配送区域" min-width="120" />
         <el-table-column label="联系人" min-width="145">
           <template #default="{ row }">
             <div>{{ row.contact_name || '—' }}</div>
@@ -285,7 +285,8 @@ onMounted(loadData)
         </el-table-column>
       </el-table>
 
-      <div class="table-summary">共 {{ filteredStores.length }} 条门店数据，本页最多加载 100 条</div>
+      <div class="table-summary">本页 {{ stores.length }} 条门店 · 第 {{ Math.floor(offset/pageSize)+1 }} 页</div>
+      <el-button :disabled="offset === 0 || loading" @click="changePage(-pageSize)">上一页</el-button><el-button :disabled="stores.length < pageSize || loading" @click="changePage(pageSize)">下一页</el-button>
     </el-card>
 
     <StoreFormDialog

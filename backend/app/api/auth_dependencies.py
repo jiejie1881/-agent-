@@ -8,7 +8,7 @@ from app.core.config import get_settings
 from app.core.security import decode_access_token
 from app.domain.enums import UserRole
 from app.domain.exceptions import AuthenticationError, PermissionDeniedError
-from app.domain.permissions import Permission, ROLE_PERMISSIONS, has_permission
+from app.domain.permissions import Permission, has_permission
 from app.infrastructure.database.session import get_db
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
@@ -45,20 +45,37 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 def _required_permission(request: Request) -> Permission:
+    if request.url.path == '/api/v1/agent/memories' or request.url.path.startswith('/api/v1/agent/memories/'):
+        return Permission.AGENT_READ
+    if request.url.path == "/api/v1/knowledge" or request.url.path.startswith("/api/v1/knowledge/"):
+        # Route-level admin checks protect mutations; laboratory/object reads
+        # additionally enforce current KB and document ACL in the service.
+        return Permission.AGENT_READ
     if request.method in {"GET", "HEAD", "OPTIONS"}:
         return Permission.READ
     path = request.url.path
+    if "/exception-cases" in path:
+        return Permission.OPERATIONS_WRITE
+    if "/business-imports" in path:
+        return Permission.OPERATIONS_WRITE
+    if request.method == "POST" and path.rstrip("/").endswith("/agent/dispatch/accept-draft"):
+        return Permission.AGENT_DRAFT_ACCEPT
+    if request.method == "POST" and path.rstrip("/").endswith("/agent-confirm-publish"):
+        return Permission.AGENT_PLAN_PUBLISH
+    if path.rstrip("/").endswith(("/agent/dispatch/shadow", "/agent/dispatch/shadow/context")):
+        return Permission.DISPATCH_WRITE
     if request.method == "POST":
         normalized_path = path.rstrip("/")
         if normalized_path.endswith('/dispatch-plans/compare-quality'):
             return Permission.READ  # 只读快照对比，不产生业务写入。
-        if normalized_path.endswith("/agent/chat") or normalized_path.endswith(
-            "/agent/conversations"
-        ) or (
+        if normalized_path.endswith(("/agent/chat", "/agent/conversations")) or (
             "/agent/conversations/" in normalized_path
             and (
                 normalized_path.endswith("/messages")
+                or normalized_path.endswith('/stream')
+                or normalized_path.endswith('/stream/cancel')
                 or "/pending-actions/" in normalized_path
+                or ("/executions/" in normalized_path and normalized_path.endswith(("/resume","/cancel")))
             )
         ):
             return Permission.AGENT_READ

@@ -2,6 +2,7 @@ import type { TimestampFields } from '@/types/common'
 import type { Route } from '@/types/route'
 
 export interface Store extends TimestampFields {
+  delivery_region?: string | null
   id: number
   code: string
   name: string
@@ -14,6 +15,7 @@ export interface Store extends TimestampFields {
 }
 
 export interface StorePayload {
+  delivery_region?: string | null
   code: string
   name: string
   address: string | null

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query, Response, status
 
 from app.api.dependencies import DbSession
+from app.api.auth_dependencies import CurrentUser
 from app.schemas.terrain import TerrainCreate, TerrainResponse, TerrainUpdate
 from app.services.terrain_service import TerrainService
 
@@ -22,17 +23,17 @@ def get_terrain(terrain_id: int, db: DbSession):
 
 
 @router.post("", response_model=TerrainResponse, status_code=status.HTTP_201_CREATED)
-def create_terrain(data: TerrainCreate, db: DbSession):
-    return TerrainService(db).create(data)
+def create_terrain(data: TerrainCreate, db: DbSession, actor: CurrentUser):
+    return TerrainService(db).with_audit(actor,'MASTER_DATA_CREATED','Terrain',changes=data.model_dump()).create(data)
 
 
 @router.patch("/{terrain_id}", response_model=TerrainResponse)
-def update_terrain(terrain_id: int, data: TerrainUpdate, db: DbSession):
-    return TerrainService(db).update(terrain_id, data)
+def update_terrain(terrain_id: int, data: TerrainUpdate, db: DbSession, actor: CurrentUser):
+    return TerrainService(db).with_audit(actor,'MASTER_DATA_UPDATED','Terrain',terrain_id,data.model_dump(exclude_unset=True)).update(terrain_id, data)
 
 
 @router.delete("/{terrain_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_terrain(terrain_id: int, db: DbSession) -> Response:
-    TerrainService(db).delete(terrain_id)
+def delete_terrain(terrain_id: int, db: DbSession, actor: CurrentUser) -> Response:
+    TerrainService(db).with_audit(actor,'MASTER_DATA_DELETED','Terrain',terrain_id).delete(terrain_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

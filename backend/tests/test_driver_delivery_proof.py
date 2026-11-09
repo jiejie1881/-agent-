@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.domain.enums import DeliveryDemandStatus, DeliveryPeriod
 from app.models.audit_log import AuditLog
 from app.models.delivery_demand import DeliveryDemand
-from app.models.dispatch_plan import DispatchOrderDetail
+from app.models.dispatch_plan import DeliveryProof, DispatchOrderDetail
 from app.models.store import Store
 from app.services.audit_log_service import AuditAction
 from tests.test_driver_api import _driver_headers, _setup_driver_tasks
@@ -282,6 +282,32 @@ def test_non_image_proof_is_rejected(client, session, tmp_path, monkeypatch):
     )
     assert response.status_code == 409
     assert list(tmp_path.iterdir()) == []
+
+
+def test_undecodable_or_mismatched_image_cannot_create_proof_or_audit(
+    client, session, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        "app.services.delivery_stop_service.delivery_proof_directory",
+        lambda: tmp_path,
+    )
+    _, _, order, *_ = _setup_driver_tasks(session)
+    headers, task = _start_task(client, order.id)
+    stop_id = task["stops"][0]["id"]
+    client.post(f"/api/driver/tasks/{order.id}/stops/{stop_id}/arrive", headers=headers)
+    url = f"/api/driver/tasks/{order.id}/stops/{stop_id}/proofs"
+    for payload, mime in (
+        (b"\x89PNG\r\n\x1a\n" + b"invalid-image", "image/png"),
+        (PNG_1X1, "image/jpeg"),
+        (PNG_1X1[:-8], "image/png"),
+    ):
+        response = client.post(url, headers=headers, files={"file": ("proof.png", payload, mime)})
+        assert response.status_code == 409
+    assert list(tmp_path.iterdir()) == []
+    assert session.scalars(select(DeliveryProof)).all() == []
+    assert session.scalars(select(AuditLog).where(
+        AuditLog.action == AuditAction.DELIVERY_PROOF_UPLOADED
+    )).all() == []
 
 
 def test_oversized_proof_is_rejected(client, session, tmp_path, monkeypatch):

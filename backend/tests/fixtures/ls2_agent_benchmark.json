@@ -1,0 +1,12 @@
+[
+ {"id":"ordinary","query":"查看车辆","intent":"VEHICLES","tools":["list_vehicles"],"hitl":false},
+ {"id":"multi_tool","query":"查询订单和司机","intent":"COMPOSITE","tools":["list_delivery_demands","list_drivers"],"hitl":false},
+ {"id":"dependencies","query":"查看运输任务","intent":"TRANSPORT","tools":["list_dispatch_plans","get_dispatch_plan_detail","validate_dispatch_plan"],"hitl":false},
+ {"id":"tool_failure","query":"查看调度方案详情","intent":"DISPATCH","tools":["get_dispatch_plan_detail","list_dispatch_plans"],"hitl":false,"recovery_expected":true},
+ {"id":"invalid_parameters","query":"查看车辆","intent":"VEHICLES","tools":[],"hitl":false},
+ {"id":"hitl_confirm","query":"取消方案","intent":"WRITE","tools":["cancel_dispatch_plan"],"hitl":true},
+ {"id":"hitl_reject","query":"取消方案","intent":"WRITE","tools":["cancel_dispatch_plan"],"hitl":true},
+ {"id":"interruption","query":"查看车辆","intent":"VEHICLES","tools":["list_vehicles"],"hitl":false},
+ {"id":"state_recovery","query":"查看车辆","intent":"VEHICLES","tools":["list_vehicles"],"hitl":false,"recovery_expected":true},
+ {"id":"multi_turn","query":"那另一个呢","intent":"CLARIFY","tools":[],"hitl":false}
+]

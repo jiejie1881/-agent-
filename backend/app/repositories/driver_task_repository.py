@@ -1,11 +1,20 @@
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from app.domain.enums import DispatchPlanStatus
+from app.domain.enums import (
+    DeliveryDemandStatus,
+    DeliveryStopStatus,
+    DispatchPlanStatus,
+)
 from app.models.delivery_demand import DeliveryDemand
-from app.models.dispatch_plan import DeliveryProof, DispatchOrder, DispatchOrderDetail, DispatchPlan
+from app.models.dispatch_plan import (
+    DeliveryProof,
+    DispatchOrder,
+    DispatchOrderDetail,
+    DispatchPlan,
+)
 from app.models.vehicle import Vehicle
 
 
@@ -19,7 +28,7 @@ class DriverTaskRepository:
             .where(
                 DispatchOrder.id == task_id,
                 DispatchOrder.actual_driver_id == driver_user_id,
-                DispatchPlan.status == DispatchPlanStatus.PUBLISHED,
+                self._visible_plan_or_completed_task(),
             )
         )
 
@@ -35,7 +44,7 @@ class DriverTaskRepository:
     ) -> tuple[list[DispatchOrder], int]:
         filters = [
             DispatchOrder.actual_driver_id == driver_user_id,
-            DispatchPlan.status == DispatchPlanStatus.PUBLISHED,
+            self._visible_plan_or_completed_task(),
         ]
         if delivery_date is not None:
             filters.append(DispatchPlan.delivery_date == delivery_date)
@@ -62,6 +71,27 @@ class DriverTaskRepository:
             .limit(limit)
         )
         return list(self.session.scalars(statement).unique()), total
+
+    @staticmethod
+    def _visible_plan_or_completed_task():
+        # A replaced plan is CANCELLED, but its completed tasks remain historical
+        # records owned by the original driver. Never expose unexecuted old tasks.
+        has_details = select(DispatchOrderDetail.id).where(
+            DispatchOrderDetail.dispatch_order_id == DispatchOrder.id
+        ).correlate(DispatchOrder).exists()
+        unfinished = select(DispatchOrderDetail.id).join(
+            DeliveryDemand, DeliveryDemand.id == DispatchOrderDetail.delivery_demand_id
+        ).where(
+            DispatchOrderDetail.dispatch_order_id == DispatchOrder.id,
+            or_(DeliveryDemand.status != DeliveryDemandStatus.COMPLETED,
+                DispatchOrderDetail.delivery_status.not_in(
+                    [DeliveryStopStatus.SIGNED, DeliveryStopStatus.FAILED])),
+        ).correlate(DispatchOrder).exists()
+        return or_(
+            DispatchPlan.status == DispatchPlanStatus.PUBLISHED,
+            and_(DispatchPlan.status == DispatchPlanStatus.CANCELLED,
+                 has_details, ~unfinished),
+        )
 
     @staticmethod
     def _statement():

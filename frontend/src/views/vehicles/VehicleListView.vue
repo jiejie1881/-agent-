@@ -10,7 +10,10 @@ import type { Vehicle, VehiclePayload, VehicleType } from '@/types/vehicle'
 import type { AuthUser } from '@/types/auth'
 import VehicleFormDialog from '@/views/vehicles/components/VehicleFormDialog.vue'
 import { fetchEnterpriseOverview, type EnterpriseOverview } from '@/api/enterprise'
-import { typeLabel } from '@/utils/businessLabels'
+import { typeLabel, businessRef } from '@/utils/businessLabels'
+import {listRoutes} from '@/api/routes'
+import type {Route} from '@/types/route'
+const routes = ref<Route[]>([])
 
 const authStore = useAuthStore()
 const loading = ref(false), submitting = ref(false), dialogVisible = ref(false)
@@ -37,6 +40,7 @@ async function loadData() {
     if (version !== requestVersion) return
     vehicles.value = vehicleRows
     vehicleTypes.value = typeRows
+    routes.value = await allPages<Route>(listRoutes)
     try { const {data} = await fetchEnterpriseOverview(day.value); if (version === requestVersion) enterprise.value = data }
     catch { if (version === requestVersion) statusError.value = '当日运营状态加载失败，可重试；基础资料仍可查看。' }
     if (authStore.canManageMasterData) drivers.value = (await listUsers()).data.filter((item) => item.role === 'DRIVER')
@@ -65,7 +69,7 @@ onMounted(loadData)
       <div class="toolbar"><div class="filters"><el-input v-model="keyword" :prefix-icon="Search" clearable placeholder="搜索车辆编码、车牌号或车型" /><el-select v-model="selectedTypeId" clearable placeholder="全部车型"><el-option v-for="item in vehicleTypes" :key="item.id" :label="item.name" :value="item.id" /></el-select></div><el-button :icon="Refresh" :loading="loading" @click="loadData">刷新</el-button></div>
       <el-table v-loading="loading" :data="filtered" row-key="id" stripe>
         <template #empty><el-empty description="暂无车辆数据" :image-size="92" /></template>
-        <el-table-column label="车辆" min-width="190"><template #default="{ row }"><strong>{{ row.plate_number }}</strong><div class="code">{{ row.code }}</div></template></el-table-column>
+        <el-table-column label="车辆" min-width="190"><template #default="{ row }"><strong>{{ row.plate_number }}</strong><div class="code">{{ businessRef('VH', row.id) }} · {{ row.code }}</div></template></el-table-column>
         <el-table-column label="车型" min-width="210"><template #default="{ row }"><div>{{ typeLabel(row.vehicle_type.code,row.vehicle_type.name) }}</div><div class="code">{{ row.vehicle_type.code }}</div></template></el-table-column>
         <el-table-column label="载重范围" min-width="190" align="center"><template #default="{ row }">{{ Number(row.vehicle_type.min_load).toFixed(2) }} ～ {{ Number(row.vehicle_type.max_load).toFixed(2) }}</template></el-table-column>
         <el-table-column label="常驻司机" min-width="150"><template #default="{ row }">{{ operational(row.id)?.default_driver?.name ?? (row.driver_user_id ? '资料未加载' : '未绑定') }}<div class="code">{{ operational(row.id)?.default_driver?.employee_code }}</div></template></el-table-column>
@@ -75,7 +79,7 @@ onMounted(loadData)
         <el-table-column v-if="authStore.canManageMasterData" label="操作" width="150" align="center" fixed="right"><template #default="{ row }"><el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button><el-button link type="danger" @click="remove(row)">删除</el-button></template></el-table-column>
       </el-table><div class="summary">共 {{ filtered.length }} 条车辆数据</div>
     </el-card>
-    <VehicleFormDialog v-if="authStore.canManageMasterData" v-model="dialogVisible" :vehicle="editing" :vehicle-types="vehicleTypes" :drivers="drivers" :submitting="submitting" @submit="submit" />
+    <VehicleFormDialog v-if="authStore.canManageMasterData" v-model="dialogVisible" :vehicle="editing" :vehicle-types="vehicleTypes" :drivers="drivers" :routes="routes" :submitting="submitting" @submit="submit" />
   </section>
 </template>
 

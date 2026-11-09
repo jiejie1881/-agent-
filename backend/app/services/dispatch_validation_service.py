@@ -84,12 +84,16 @@ class DispatchValidationService:
             dispatch_period=data.period,
             quantity=data.quantity,
             min_load=vehicle.vehicle_type.min_load,
-            max_load=vehicle.vehicle_type.max_load,
+            max_load=min(vehicle.vehicle_type.max_load, vehicle.rated_load) if vehicle.rated_load else vehicle.vehicle_type.max_load,
             attendance_exists=attendance is not None,
             vehicle_available=attendance.available if attendance else False,
             store_belongs_to_route=store_route is not None,
             terrain_configured=route_terrain is not None,
             terrain_name=(route_terrain.terrain.name if route_terrain else None),
             terrain_allowed=terrain_permission is not None,
+            vehicle_active=vehicle.is_active and vehicle.vehicle_type.is_active and vehicle.operating_status == 'ACTIVE',
+            store_active=demand.store.is_active,
+            route_active=route.is_active,
+            vehicle_route_allowed=vehicle.allowed_route_ids is None or route.id in vehicle.allowed_route_ids,
         )
         return validate_dispatch(context)

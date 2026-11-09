@@ -11,18 +11,18 @@ from app.agent.exceptions import (
     AgentToolRegistrationError,
 )
 from app.agent.schemas.tool import (
+    CANCEL_DISPATCH_PLAN_DEFINITION,
     GET_DISPATCH_PLAN_DETAIL_DEFINITION,
     GET_UNASSIGNED_DEMANDS_DEFINITION,
     GET_VEHICLE_ATTENDANCE_DEFINITION,
     LIST_DELIVERY_DEMANDS_DEFINITION,
     LIST_DISPATCH_PLANS_DEFINITION,
-    VALIDATE_DISPATCH_PLAN_DEFINITION,
     MOVE_DELIVERY_DEMAND_DEFINITION,
-    CANCEL_DISPATCH_PLAN_DEFINITION,
     SEARCH_KNOWLEDGE_BASE_DEFINITION,
+    VALIDATE_DISPATCH_PLAN_DEFINITION,
     AgentToolDefinition,
 )
-
+from app.core.config import get_settings
 
 DEFAULT_TOOL_DEFINITIONS: tuple[AgentToolDefinition, ...] = (
     LIST_DELIVERY_DEMANDS_DEFINITION,
@@ -32,6 +32,9 @@ DEFAULT_TOOL_DEFINITIONS: tuple[AgentToolDefinition, ...] = (
     GET_UNASSIGNED_DEMANDS_DEFINITION,
     VALIDATE_DISPATCH_PLAN_DEFINITION,
     SEARCH_KNOWLEDGE_BASE_DEFINITION,
+)
+
+WRITE_TOOL_DEFINITIONS: tuple[AgentToolDefinition, ...] = (
     MOVE_DELIVERY_DEMAND_DEFINITION,
     CANCEL_DISPATCH_PLAN_DEFINITION,
 )
@@ -44,9 +47,10 @@ class AgentToolRegistry:
         self,
         definitions: Sequence[AgentToolDefinition] | None = None,
     ) -> None:
-        ordered_definitions = tuple(
-            DEFAULT_TOOL_DEFINITIONS if definitions is None else definitions
-        )
+        writes_enabled = get_settings().agent_write_tools_enabled
+        supplied = (DEFAULT_TOOL_DEFINITIONS + WRITE_TOOL_DEFINITIONS
+                    if definitions is None else definitions)
+        ordered_definitions = tuple(d for d in supplied if d.read_only or writes_enabled)
         definitions_by_name: dict[str, AgentToolDefinition] = {}
         for definition in ordered_definitions:
             if definition.name in definitions_by_name:
@@ -71,6 +75,10 @@ class AgentToolRegistry:
     ) -> BaseModel:
         definition = self.get(name)
         try:
+            # Revalidate constructed model instances as well as raw JSON;
+            # model_construct() must not bypass field-level safety checks.
+            if isinstance(arguments, BaseModel):
+                arguments = arguments.model_dump(mode='python')
             return definition.arguments_schema.model_validate(arguments)
         except ValidationError as exc:
             raise AgentToolArgumentsError(name) from exc

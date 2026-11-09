@@ -29,19 +29,21 @@ class RouteService(BaseService):
             raise NotFoundError("线路不存在")
         return route
 
-    def create(self, data: RouteCreate) -> Route:
+    def create(self, data: RouteCreate, *, commit: bool = True) -> Route:
+        self._validate_source(data.model_dump())
         if self.repository.get_by_code(data.code):
             raise ConflictError("线路编码已存在")
         if self.repository.get_by_name(data.name):
             raise ConflictError("线路名称已存在")
         route = Route(**data.model_dump())
         return self._commit(
-            lambda: self.repository.add(route), "线路编码或名称已存在"
+            lambda: self.repository.add(route), "线路编码或名称已存在", commit=commit
         )
 
     def update(self, route_id: int, data: RouteUpdate) -> Route:
         route = self.get(route_id)
         updates = data.model_dump(exclude_unset=True)
+        self._validate_source({**{key: getattr(route,key) for key in ('distance_km','duration_minutes','route_data_source')}, **updates})
         for field, value in updates.items():
             setattr(route, field, value)
         return self._commit(
@@ -50,7 +52,16 @@ class RouteService(BaseService):
 
     def delete(self, route_id: int) -> None:
         route = self.get(route_id)
+        from sqlalchemy import select
+        from app.models.vehicle import Vehicle
+        if any(v.allowed_route_ids is not None and route_id in v.allowed_route_ids for v in self.session.scalars(select(Vehicle))):
+            raise ConflictError('线路已被车辆运行范围引用，不能删除')
         self._commit(lambda: self.repository.delete(route), "线路正在使用，不能删除")
+
+    @staticmethod
+    def _validate_source(values):
+        if (values.get('distance_km') is not None or values.get('duration_minutes') is not None) and not (values.get('route_data_source') or '').strip():
+            raise ConflictError('填写距离或时间必须说明数据来源；系统不自动计算道路距离')
 
 
 class RouteTerrainService(BaseService):

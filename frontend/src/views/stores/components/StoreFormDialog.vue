@@ -22,6 +22,7 @@ const form = reactive<StorePayload>({
   address: null,
   contact_name: null,
   contact_phone: null,
+  delivery_region: null,
   longitude: null,
   latitude: null,
   is_active: true,
@@ -52,6 +53,7 @@ function resetForm() {
     address: source?.address ?? null,
     contact_name: source?.contact_name ?? null,
     contact_phone: source?.contact_phone ?? null,
+    delivery_region: source?.delivery_region ?? null,
     longitude: source?.longitude == null ? null : Number(source.longitude),
     latitude: source?.latitude == null ? null : Number(source.latitude),
     is_active: source?.is_active ?? true,
@@ -74,6 +76,7 @@ async function handleSubmit() {
     address: normalizeOptional(form.address),
     contact_name: normalizeOptional(form.contact_name),
     contact_phone: normalizeOptional(form.contact_phone),
+    delivery_region: normalizeOptional(form.delivery_region ?? null),
     longitude: form.longitude,
     latitude: form.latitude,
     is_active: form.is_active,
@@ -117,6 +120,7 @@ watch(
         <el-form-item label="经度" prop="longitude">
           <el-input-number v-model="form.longitude" :min="-180" :max="180" :precision="7" controls-position="right" placeholder="选填" />
         </el-form-item>
+        <el-form-item label="配送区域" prop="delivery_region"><el-input v-model="form.delivery_region" maxlength="100" placeholder="选填" /></el-form-item>
         <el-form-item label="纬度" prop="latitude">
           <el-input-number v-model="form.latitude" :min="-90" :max="90" :precision="7" controls-position="right" placeholder="选填" />
         </el-form-item>

@@ -15,7 +15,8 @@ class AgentModelConfigurationError(AgentModelError):
 
 
 class AgentModelTimeoutError(AgentModelError):
-    def __init__(self) -> None:
+    def __init__(self, *, phase: str = "UNKNOWN") -> None:
+        self.timeout_phase = phase if phase in {"CONNECT", "READ", "WRITE", "POOL"} else "UNKNOWN"
         super().__init__(
             "Agent模型请求超时",
             status_code=504,

@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.domain.enums import AgentConversationMessageRole
 from app.agent.chat_types import AgentPendingActionSnapshot
+from app.agent.task_plan import ExecutionReport
 
 
 class AgentChatRequest(BaseModel):
@@ -22,6 +23,7 @@ class AgentChatResponse(BaseModel):
     tool_calls_count: int
     used_tools: list[str]
     request_id: str
+    execution: ExecutionReport | None = None
 
 
 class AgentConversationSummaryResponse(BaseModel):
@@ -54,6 +56,7 @@ class AgentConversationChatResponse(BaseModel):
     used_tools: list[str]
     request_id: str
     pending_actions: list[AgentPendingActionSnapshot] = Field(default_factory=list)
+    execution: ExecutionReport | None = None
 
 
 class AgentPendingActionExecutionResponse(BaseModel):

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChatDotRound, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
 
 import {
   createConversation,
@@ -10,12 +10,16 @@ import {
   sendConversationMessage,
   confirmPendingAction,
   cancelPendingAction,
+  getAgentExecutions,
+  resumeAgentExecution,
+  cancelAgentExecution,
 } from '@/api/agent'
-import type { AgentConversation, AgentConversationDetail, AgentPendingAction } from '@/types/agent'
+import type { AgentConversation, AgentConversationDetail, AgentPendingAction, AgentExecutionReport } from '@/types/agent'
 import { useAuthStore } from '@/stores/auth'
 import AgentComposer from '@/views/agent/components/AgentComposer.vue'
 import AgentConversationList from '@/views/agent/components/AgentConversationList.vue'
 import AgentMessageList from '@/views/agent/components/AgentMessageList.vue'
+import AgentExecutionPanel from '@/views/agent/components/AgentExecutionPanel.vue'
 
 interface MessageListExpose {
   scrollToBottom: () => Promise<void>
@@ -29,12 +33,108 @@ const listLoading = ref(false)
 const conversationLoading = ref(false)
 const creating = ref(false)
 const sending = ref(false)
+const liveAnswer = ref('')
+const liveStatus = ref('')
+const liveTrace = ref('')
+const liveMetrics = ref<Record<string, unknown> | null>(null)
+let streamAbort: AbortController | null = null
+async function stopStream() {
+  if (currentConversationId.value === null) return
+  const { default: http } = await import('@/api/http')
+  await http.post(`/agent/conversations/${currentConversationId.value}/stream/cancel`)
+  liveStatus.value = '已请求取消，等待服务端确认'
+}
 const detailRequestSequence = ref(0)
 const messageListRef = ref<MessageListExpose | null>(null)
 const actionLoadingId = ref<number | null>(null)
 const authStore = useAuthStore()
+const executions = ref<AgentExecutionReport[]>([])
+const resumeLoadingId = ref<string | null>(null)
+const cancelLoadingId = ref<string | null>(null)
+const cancellationNotice = ref('')
+const cancellationExecutionId = ref<string | null>(null)
+const cancellationDisplay = computed(() => executions.value[0]?.execution_id !== cancellationExecutionId.value ? ''
+  : executions.value.some(item => item.execution_id === cancellationExecutionId.value && item.status === 'CANCELLED')
+    ? '后端已确认当前执行取消。' : cancellationNotice.value)
+const executionStatusError = ref(false)
+let pollTimer: ReturnType<typeof setTimeout> | undefined
+let disposed = false
+let pollGeneration = 0
+let pollingConversationId: number | null = null
 
-const interactionLocked = computed(() => creating.value || sending.value)
+const activeExecutionStates = new Set(['RUNNING', 'RECOVERING', 'RETRYING'])
+
+function mergeExecutionReports(incoming: AgentExecutionReport[]) {
+  const known = new Map(executions.value.map(item => [item.execution_id, item]))
+  const accepted = incoming.map(item => {
+    const previous = known.get(item.execution_id)
+    if (!previous) return item
+    const revision = item.revision ?? 0
+    const previousRevision = previous.revision ?? 0
+    if (revision !== previousRevision) return revision > previousRevision ? item : previous
+    // Older checkpoints have no revision; preserve progress and terminal states.
+    if (previous.events.length !== item.events.length) {
+      return previous.events.length > item.events.length ? previous : item
+    }
+    return !activeExecutionStates.has(previous.status) && activeExecutionStates.has(item.status) ? previous : item
+  })
+  const ids = new Set(accepted.map(item => item.execution_id))
+  const missing = executions.value.filter(item => !ids.has(item.execution_id))
+  const latest = executions.value[0]?.execution_id
+  const head = accepted[0]?.execution_id
+  // A poll started before a new execution may omit it completely. Preserve the
+  // known newer head, while allowing a genuinely new server execution to lead.
+  const olderList = latest && !ids.has(latest) && head && known.has(head)
+  executions.value = (olderList ? [...missing, ...accepted] : [...accepted, ...missing]).slice(0, 20)
+}
+
+function stopExecutionPolling() {
+  ++pollGeneration
+  clearTimeout(pollTimer)
+  pollingConversationId = null
+}
+
+function needsExecutionPolling() {
+  const current = executions.value[0]
+  return sending.value || resumeLoadingId.value !== null ||
+    (!!current && activeExecutionStates.has(current.status) && current.can_resume !== true)
+}
+
+function ensureExecutionPolling(id: number) {
+  if (disposed || currentConversationId.value !== id || !needsExecutionPolling() || pollingConversationId === id) return
+  pollingConversationId = id
+  const generation = ++pollGeneration
+  void pollExecution(id, generation)
+}
+
+async function refreshExecutions(id: number) {
+  try {
+    const response = await getAgentExecutions(id)
+    if (!disposed && currentConversationId.value === id) {
+      mergeExecutionReports(response.data)
+      executionStatusError.value = false
+    }
+  } catch {
+    if (!disposed && currentConversationId.value === id) executionStatusError.value = true
+  }
+}
+
+async function pollExecution(id: number, generation: number) {
+  await refreshExecutions(id)
+  if (disposed || generation !== pollGeneration || currentConversationId.value !== id) return
+  if (needsExecutionPolling()) {
+    pollTimer = setTimeout(() => { void pollExecution(id, generation) }, 1000)
+  } else {
+    pollingConversationId = null
+  }
+}
+
+const interactionLocked = computed(() => creating.value || sending.value || actionLoadingId.value !== null || resumeLoadingId.value !== null || cancelLoadingId.value !== null)
+const serverExecutionActive = computed(() => {
+  const current = executions.value[0]
+  return !!current && activeExecutionStates.has(current.status) && current.can_resume !== true
+})
+const sendBlocked = computed(() => interactionLocked.value || serverExecutionActive.value)
 const messages = computed(() => currentConversation.value?.messages ?? [])
 const pendingActions = computed(() => currentConversation.value?.pending_actions ?? [])
 
@@ -53,8 +153,11 @@ async function refreshConversationList() {
 async function selectConversation(conversationId: number) {
   if (interactionLocked.value || conversationId === currentConversationId.value) return
   const requestSequence = ++detailRequestSequence.value
+  stopExecutionPolling()
   currentConversationId.value = conversationId
   currentConversation.value = null
+  executions.value = []
+  executionStatusError.value = false
   conversationLoading.value = true
   try {
     const response = await getConversation(conversationId)
@@ -63,6 +166,8 @@ async function selectConversation(conversationId: number) {
       currentConversationId.value !== conversationId
     ) return
     currentConversation.value = response.data
+    await refreshExecutions(conversationId)
+    ensureExecutionPolling(conversationId)
     await messageListRef.value?.scrollToBottom()
   } catch {
     if (requestSequence === detailRequestSequence.value) currentConversation.value = null
@@ -77,9 +182,12 @@ async function createAndSelectConversation(): Promise<number | null> {
   try {
     const response = await createConversation()
     const created = response.data
+    stopExecutionPolling()
     conversations.value = [created, ...conversations.value.filter((item) => item.id !== created.id)]
     currentConversationId.value = created.id
     currentConversation.value = { ...created, messages: [], pending_actions: [] }
+    executions.value = []
+    executionStatusError.value = false
     ++detailRequestSequence.value
     await nextTick()
     return created.id
@@ -97,7 +205,7 @@ async function handleCreateConversation() {
 
 async function sendMessage() {
   const message = input.value.trim()
-  if (!message || message.length > 4000 || sending.value || creating.value) return
+  if (!message || message.length > 4000 || sendBlocked.value) return
 
   let conversationId = currentConversationId.value
   if (conversationId === null) {
@@ -106,9 +214,27 @@ async function sendMessage() {
   }
 
   sending.value = true
+  ensureExecutionPolling(conversationId)
   const requestSequence = ++detailRequestSequence.value
   try {
-    await sendConversationMessage(conversationId, message)
+      liveAnswer.value = ''; liveStatus.value = '正在启动'; liveMetrics.value = null
+      streamAbort = new AbortController()
+      const executionResponse = await sendConversationMessage(conversationId, message, event => {
+        liveTrace.value = event.trace_id
+        if (event.event_type === 'token') liveAnswer.value += event.payload.text
+        if (event.event_type === 'message_complete') { liveAnswer.value = event.payload.content; liveStatus.value = '已完成' }
+        if (event.event_type === 'agent_status') liveStatus.value = `执行状态：${event.payload.status}`
+        if (event.event_type === 'tool_call_start') liveStatus.value = `正在调用工具：${event.payload.tool || ''}`
+        if (event.event_type === 'tool_call_result') liveStatus.value = `工具执行：${event.payload.status}`
+        if (event.event_type === 'memory_retrieval') liveStatus.value = `已召回 ${event.payload.count} 条记忆`
+        if (event.event_type === 'model_metrics') liveMetrics.value = event.payload
+        if (event.event_type === 'error') liveStatus.value = event.payload.message
+        if (event.event_type === 'cancelled') liveStatus.value = '任务已取消，请核对执行记录'
+        if (event.event_type === 'approval_required') liveStatus.value = '等待人工审批'
+      }, streamAbort.signal)
+    if (executionResponse?.data?.execution && currentConversationId.value === conversationId) {
+      mergeExecutionReports([executionResponse.data.execution])
+    }
     const [detailResponse, listResponse] = await Promise.all([
       getConversation(conversationId),
       listConversations({ offset: 0, limit: 100 }),
@@ -119,13 +245,18 @@ async function sendMessage() {
       requestSequence === detailRequestSequence.value
     ) {
       currentConversation.value = detailResponse.data
+        liveAnswer.value = ''
       input.value = ''
       await messageListRef.value?.scrollToBottom()
     }
   } catch {
     // The backend stores no half exchange; keep the input so the user can retry.
   } finally {
+      streamAbort = null
     sending.value = false
+    stopExecutionPolling()
+    await refreshExecutions(conversationId)
+    ensureExecutionPolling(conversationId)
   }
 }
 
@@ -135,27 +266,91 @@ async function initialize() {
   if (firstConversation) await selectConversation(firstConversation.id)
 }
 
-async function reloadCurrentConversation() {
-  const id = currentConversationId.value
+async function reloadCurrentConversation(id = currentConversationId.value) {
   if (id === null) return
-  currentConversation.value = (await getConversation(id)).data
+  const response = await getConversation(id)
+  if (currentConversationId.value === id) currentConversation.value = response.data
+  await refreshExecutions(id)
+  ensureExecutionPolling(id)
+}
+
+async function refreshCurrentStatus() {
+  await refreshConversationList()
+  if (currentConversationId.value === null) return
+  try {
+    await reloadCurrentConversation()
+  } catch {
+    executionStatusError.value = true
+  }
+}
+
+async function handleCancelExecution(execution: AgentExecutionReport) {
+  const conversationId = currentConversationId.value
+  const actual = executions.value.find(item => item.execution_id === execution.execution_id)
+  if (conversationId === null || cancelLoadingId.value !== null || actionLoadingId.value !== null || resumeLoadingId.value !== null ||
+      !actual || !activeExecutionStates.has(actual.status) || actual.can_resume === true) return
+  cancelLoadingId.value = execution.execution_id
+  cancellationExecutionId.value = execution.execution_id
+  try {
+    await cancelAgentExecution(conversationId, execution.execution_id)
+    cancellationNotice.value = '取消请求已送达，正在等待后端停止和清理；尚未确认取消完成。'
+  } catch {
+    cancellationNotice.value = '取消结果尚未核实，请刷新查看；不会自动重复提交。'
+  } finally {
+    cancelLoadingId.value = null
+    await refreshExecutions(conversationId)
+    ensureExecutionPolling(conversationId)
+  }
+}
+
+async function handleResumeExecution(execution: AgentExecutionReport) {
+  const conversationId = currentConversationId.value
+  const authoritative = executions.value.find(item => item.execution_id === execution.execution_id)
+  if (conversationId === null || interactionLocked.value || authoritative?.can_resume !== true) return
+  resumeLoadingId.value = execution.execution_id
+  ensureExecutionPolling(conversationId)
+  try {
+    const response = await resumeAgentExecution(conversationId, execution.execution_id)
+    if (!disposed && currentConversationId.value === conversationId) mergeExecutionReports([response.data])
+    await reloadCurrentConversation(conversationId)
+  } catch {
+    // The response may have been lost after a completed step. Reconcile once;
+    // only a later explicit action can ask the backend to resume again.
+    await reconcileAction(conversationId)
+  } finally {
+    resumeLoadingId.value = null
+    stopExecutionPolling()
+    await refreshExecutions(conversationId)
+    ensureExecutionPolling(conversationId)
+  }
+}
+
+async function reconcileAction(conversationId: number) {
+  // A timeout does not prove the write failed. Read authoritative state;
+  // never replay confirmation automatically.
+  try {
+    await reloadCurrentConversation(conversationId)
+  } catch {
+    // Shared interceptor reports network failure; preserve the visible history.
+  }
 }
 
 async function handleConfirmAction(action: AgentPendingAction) {
   const conversationId = currentConversationId.value
-  if (conversationId === null || actionLoadingId.value !== null) return
+  if (conversationId === null || interactionLocked.value || !authStore.canOperate || action.status !== 'PENDING') return
+  actionLoadingId.value = action.id
   try {
     await ElMessageBox.confirm(
       action.risk_level === 'HIGH' ? `${action.summary}。该操作风险较高，确认继续？` : `${action.summary}，确认执行？`,
       '确认 Agent 写操作',
       { type: action.risk_level === 'HIGH' ? 'error' : 'warning', confirmButtonText: '确认执行', cancelButtonText: '返回' },
     )
-    actionLoadingId.value = action.id
     await confirmPendingAction(conversationId, action.id)
     ElMessage.success('操作已执行')
-    await reloadCurrentConversation()
+    await reloadCurrentConversation(conversationId)
   } catch (error) {
     if (error === 'cancel' || error === 'close') return
+    await reconcileAction(conversationId)
   } finally {
     actionLoadingId.value = null
   }
@@ -163,20 +358,22 @@ async function handleConfirmAction(action: AgentPendingAction) {
 
 async function handleCancelAction(action: AgentPendingAction) {
   const conversationId = currentConversationId.value
-  if (conversationId === null || actionLoadingId.value !== null) return
+  if (conversationId === null || interactionLocked.value || !authStore.canOperate || action.status !== 'PENDING') return
   actionLoadingId.value = action.id
   try {
     await cancelPendingAction(conversationId, action.id)
     ElMessage.success('待确认操作已取消，业务数据未修改')
-    await reloadCurrentConversation()
+    await reloadCurrentConversation(conversationId)
   } catch {
     // Shared interceptor displays the backend business error.
+    await reconcileAction(conversationId)
   } finally {
     actionLoadingId.value = null
   }
 }
 
 onMounted(initialize)
+onBeforeUnmount(() => { disposed = true; streamAbort?.abort(); stopExecutionPolling() })
 </script>
 
 <template>
@@ -190,7 +387,7 @@ onMounted(initialize)
         :icon="Refresh"
         :loading="listLoading || conversationLoading"
         :disabled="interactionLocked"
-        @click="refreshConversationList"
+        @click="refreshCurrentStatus"
       >
         刷新会话
       </el-button>
@@ -235,7 +432,15 @@ onMounted(initialize)
           @confirm-action="handleConfirmAction"
           @cancel-action="handleCancelAction"
         />
-        <AgentComposer v-model="input" :sending="interactionLocked" @send="sendMessage" />
+        <p v-if="cancellationDisplay" role="status">{{ cancellationDisplay }}</p>
+        <AgentExecutionPanel :executions="executions" :resume-loading-id="resumeLoadingId" :cancel-pending="cancelLoadingId !== null"
+          :disabled="interactionLocked" :status-error="executionStatusError" @resume="handleResumeExecution" @cancel="handleCancelExecution" />
+        <p v-if="serverExecutionActive" class="execution-pending" role="status">服务端仍在执行当前任务，状态确认前暂停发送新请求。</p>
+        <p role="status">{{ liveStatus }}</p>
+        <p v-if="liveAnswer" style="white-space: pre-wrap">{{ liveAnswer }}</p>
+        <el-button v-if="sending" @click="stopStream">停止生成</el-button>
+        <details v-if="liveTrace"><summary>执行详情</summary><p>追踪标识：{{ liveTrace }}</p><pre>{{ liveMetrics }}</pre></details>
+        <AgentComposer v-model="input" :sending="sendBlocked" @send="sendMessage" />
       </main>
     </div>
   </section>
@@ -294,6 +499,8 @@ onMounted(initialize)
   min-height: 0;
   flex-direction: column;
 }
+
+.execution-pending { margin: 8px 18px 0; color: #64748b; font-size: 12px; }
 
 .chat-panel__header {
   display: flex;

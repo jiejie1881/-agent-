@@ -1,0 +1,12 @@
+[
+  {"id": "publish", "query": "派车方案发布前要校验哪些规则？", "relevant": true, "expected_source": "dispatch_rules.md", "expected_section": "方案发布"},
+  {"id": "load", "query": "每趟任务的最低和最高载重怎样校验？", "relevant": true, "expected_source": "dispatch_rules.md", "expected_section": "时段与载重"},
+  {"id": "trips", "query": "同一辆车在一个时段可以执行多趟吗？", "relevant": true, "expected_source": "dispatch_rules.md", "expected_section": "同车多趟"},
+  {"id": "terrain", "query": "门店线路和地形限制如何影响候选车辆？", "relevant": true, "expected_source": "dispatch_rules.md", "expected_section": "候选车辆与线路"},
+  {"id": "unassigned", "query": "无法分配的配送需求在哪里查看原因？", "relevant": true, "expected_source": "exception_handling.md", "expected_section": "未分配需求"},
+  {"id": "approval", "query": "Agent 移动需求或取消方案需要人工确认吗？", "relevant": true, "expected_source": "exception_handling.md", "expected_section": "处理建议边界"},
+  {"id": "moon", "query": "月球采矿许可证如何办理？", "relevant": false},
+  {"id": "medical", "query": "偏头痛应该吃哪种处方药？", "relevant": false},
+  {"id": "visa", "query": "办理法国留学签证需要什么材料？", "relevant": false},
+  {"id": "recipe", "query": "红烧肉怎么做才能肥而不腻？", "relevant": false}
+]

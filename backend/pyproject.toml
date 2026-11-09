@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Logistics dispatch management API"
 requires-python = ">=3.11"
 dependencies = [
+    "openpyxl>=3.1.5,<4",
+    "defusedxml>=0.7.1,<1",
     "fastapi>=0.115,<1.0",
     "uvicorn[standard]>=0.34,<1.0",
     "sqlalchemy>=2.0,<3.0",
@@ -18,15 +20,20 @@ dependencies = [
     "alembic>=1.14,<2.0",
     "httpx>=0.28,<1.0",
     "python-multipart>=0.0.20,<1.0",
+    "Pillow>=11,<13",
     "chromadb>=1.0,<2.0",
+    "jieba==0.42.1",
+    "rank-bm25==0.2.2",
     "langchain==1.4.4",
     "langchain-openai==1.7.0",
+    "langsmith==0.14.7",
     "langgraph==1.2.14",
     "langgraph-checkpoint-sqlite==3.1.1",
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=8.3,<9.0"]
+test = ["pytest==9.1.1"]
+rerank = ["sentence-transformers>=5,<6"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

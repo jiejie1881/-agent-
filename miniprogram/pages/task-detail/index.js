@@ -4,10 +4,10 @@ const auth = require('../../utils/auth')
 Page({
   data: { taskId: 0, task: null, unprocessedCount: 0, canComplete: false, loading: false, operating: false, error: '' },
   onLoad(options) { this.setData({ taskId: Number(options.id) }) },
-  onShow() { if (this.data.taskId && auth.ensureLogin()) this.load() },
+  onShow() { if (this.data.taskId && auth.ensureLogin()) this.load(); else this.setData({ task: null, unprocessedCount: 0, canComplete: false }) },
   async load() {
     const version = auth.getSessionVersion()
-    this.setData({ loading: true, error: '' })
+    this.setData({ loading: true, error: '', task: null, unprocessedCount: 0, canComplete: false })
     try {
       const task = await service.getTask(this.data.taskId)
       task.stops = await Promise.all(task.stops.map(async stop => {
@@ -32,7 +32,7 @@ Page({
     const confirmed = await new Promise((resolve) => wx.showModal({ title: '确认到店', content: '确认已经到达该门店吗？', success: (result) => resolve(result.confirm) }))
     if (!confirmed) return
     this.setData({ operating: true, error: '' })
-    try { await service.arriveStop(this.data.taskId, stopId); wx.showToast({ title: '已记录到店', icon: 'success' }); await this.load() } catch (error) { this.setData({ error: error.message }) } finally { this.setData({ operating: false }) }
+    try { await service.arriveStop(this.data.taskId, stopId); wx.showToast({ title: '已记录到店', icon: 'success' }); await this.load() } catch (error) { await this.load(); this.setData({ error: error.message }) } finally { this.setData({ operating: false }) }
   },
   async perform(event) {
     if (this.data.operating) return
@@ -42,6 +42,6 @@ Page({
     const confirmed = await new Promise((resolve) => wx.showModal({ title: '确认操作', content: '确认' + text + '当前整趟任务吗？', success: (result) => resolve(result.confirm) }))
     if (!confirmed) return
     this.setData({ operating: true, error: '' })
-    try { if (action === 'start') await service.startTask(this.data.taskId); else await service.completeTask(this.data.taskId); wx.showToast({ title: text + '成功', icon: 'success' }); await this.load() } catch (error) { this.setData({ error: error.message }) } finally { this.setData({ operating: false }) }
+    try { if (action === 'start') await service.startTask(this.data.taskId); else await service.completeTask(this.data.taskId); wx.showToast({ title: text + '成功', icon: 'success' }); await this.load() } catch (error) { await this.load(); this.setData({ error: error.message }) } finally { this.setData({ operating: false }) }
   }
 })

@@ -1,6 +1,6 @@
 # Agent 调用链复盘
 
-> 本文基于当前物流车辆智能分配系统的真实代码编写。它描述的是项目**现在已经实现**的只读 Agent，而不是一个理想化示例。
+> 本文是原 Agent Phase 1 自定义编排的历史学习资料，不代表当前升级分支的执行路径。2026-10-10 当前版本已使用 LangChain + LangGraph StateGraph，写操作支持 Pending Action / HITL，知识查询支持 RAG。最新真实架构见 [AGENT_LANGGRAPH_MIGRATION.md](AGENT_LANGGRAPH_MIGRATION.md)，发布验收见 [GITHUB_RELEASE_FINAL_REPORT.md](../GITHUB_RELEASE_FINAL_REPORT.md)。下方旧代码片段、位置及验证记录仅用于历史复盘。
 >
 > 阅读目标：看完后，能够脱离本文口述一次完整调用：`Vue → API → AgentService → ModelClient → Tool Call → Registry → Executor → Service → Repository → DB → Tool Result → LLM → Response`。
 

@@ -2,6 +2,9 @@
 .env.*
 .local/
 .venv
+.venv*
+tmp/
+tools/
 __pycache__
 *.py[cod]
 .pytest_cache

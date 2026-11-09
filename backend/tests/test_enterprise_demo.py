@@ -13,7 +13,7 @@ from app.models.ai_operations import DispatchQualityReport
 from app.services.enterprise_service import EnterpriseService
 from app.services.dispatch_quality_service import DispatchQualityService
 from app.services.demand_entity_matching_service import DemandEntityMatchingService
-from app.scripts.seed_enterprise_demo import seed_enterprise_demo, validate_target
+from tests.legacy_support.seed_enterprise_demo import seed_enterprise_demo, validate_target
 
 DAY = date(2026, 11, 6)
 

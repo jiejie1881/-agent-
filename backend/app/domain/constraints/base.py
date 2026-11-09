@@ -22,6 +22,10 @@ class DispatchValidationContext:
     terrain_configured: bool
     terrain_name: str | None
     terrain_allowed: bool
+    vehicle_active: bool = True
+    store_active: bool = True
+    route_active: bool = True
+    vehicle_route_allowed: bool = True
 
 
 @dataclass(frozen=True)

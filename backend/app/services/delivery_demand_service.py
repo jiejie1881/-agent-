@@ -53,8 +53,11 @@ class DeliveryDemandService(BaseService):
         return demand
 
     def _validate_store(self, store_id: int) -> None:
-        if self.store_repository.get(store_id) is None:
+        store = self.store_repository.get(store_id)
+        if store is None:
             raise NotFoundError("门店不存在")
+        if not store.is_active:
+            raise ConflictError("不能为停用门店创建或修改配送需求")
 
     def create(self, data: DeliveryDemandCreate, actor: User, *, commit: bool = True) -> DeliveryDemand:
         self.status_service.validate_initial(data.status)

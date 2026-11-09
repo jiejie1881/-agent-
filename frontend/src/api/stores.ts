@@ -1,7 +1,7 @@
 import http from '@/api/http'
 import type { Store, StorePayload, StoreRoute } from '@/types/store'
 
-export function listStores(params: { offset?: number; limit?: number } = {}) {
+export function listStores(params: { offset?: number; limit?: number; q?:string; is_active?:boolean; delivery_region?:string } = {}) {
   return http.get<Store[]>('/stores', { params })
 }
 

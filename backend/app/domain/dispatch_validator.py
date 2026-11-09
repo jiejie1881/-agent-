@@ -13,7 +13,19 @@ from app.domain.constraints.base import (
     DispatchValidationContext,
 )
 
+class OperatingConstraint:
+    name = 'OperatingConstraint'
+
+    def validate(self, context):
+        for valid,code,message in ((context.vehicle_active,'VEHICLE_INACTIVE','车辆或车型当前不可运营'),
+            (context.store_active,'STORE_INACTIVE','门店已停用'),(context.route_active,'ROUTE_INACTIVE','线路已停用'),
+            (context.vehicle_route_allowed,'VEHICLE_ROUTE_NOT_ALLOWED','线路不在该车辆可运行范围')):
+            if not valid:return ConstraintResult(self.name,False,message,code)
+        return ConstraintResult(self.name,True)
+
+
 DEFAULT_CONSTRAINTS: tuple[DispatchConstraint, ...] = (
+    OperatingConstraint(),
     VehicleAvailableConstraint(),
     PeriodConstraint(),
     TerrainConstraint(),

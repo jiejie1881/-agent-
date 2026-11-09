@@ -117,6 +117,7 @@ export interface PersistedUnassignedDemand {
 }
 
 export interface DispatchPlanDetail extends DispatchPlanSummary {
+  source?: 'TRADITIONAL' | 'AGENT'
   orders: PersistedDispatchOrder[]
   unassigned_demands: PersistedUnassignedDemand[]
 }

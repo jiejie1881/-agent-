@@ -12,6 +12,7 @@ class StoreBase(BaseModel):
     address: str | None = Field(default=None, max_length=255)
     contact_name: str | None = Field(default=None, max_length=100)
     contact_phone: str | None = Field(default=None, max_length=30)
+    delivery_region: str | None = Field(default=None, max_length=100)
     longitude: Decimal | None = Field(default=None, ge=-180, le=180, decimal_places=7)
     latitude: Decimal | None = Field(default=None, ge=-90, le=90, decimal_places=7)
     is_active: bool = True
@@ -55,6 +56,7 @@ class StoreUpdate(BaseModel):
     address: str | None = Field(default=None, max_length=255)
     contact_name: str | None = Field(default=None, max_length=100)
     contact_phone: str | None = Field(default=None, max_length=30)
+    delivery_region: str | None = Field(default=None, max_length=100)
     longitude: Decimal | None = Field(default=None, ge=-180, le=180, decimal_places=7)
     latitude: Decimal | None = Field(default=None, ge=-90, le=90, decimal_places=7)
     is_active: bool | None = None

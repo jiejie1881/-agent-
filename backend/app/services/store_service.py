@@ -22,14 +22,14 @@ class StoreService(BaseService):
             raise NotFoundError("门店不存在")
         return store
 
-    def create(self, data: StoreCreate) -> Store:
+    def create(self, data: StoreCreate, *, commit: bool = True) -> Store:
         if self.repository.get_by_code(data.code):
             raise ConflictError("门店编码已存在")
         if self.repository.get_by_name(data.name):
             raise ConflictError("门店名称已存在")
         store = Store(**data.model_dump())
         return self._commit(
-            lambda: self.repository.add(store), "门店编码或名称已存在"
+            lambda: self.repository.add(store), "门店编码或名称已存在", commit=commit
         )
 
     def update(self, store_id: int, data: StoreUpdate) -> Store:

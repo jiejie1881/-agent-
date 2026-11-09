@@ -17,7 +17,7 @@ class BaseRepository(Generic[ModelT]):
         return self.session.get(self.model, entity_id)
 
     def list(self, offset: int = 0, limit: int = 20) -> list[ModelT]:
-        statement = select(self.model).offset(offset).limit(limit)
+        statement = select(self.model).order_by(self.model.id).offset(offset).limit(limit)
         return list(self.session.scalars(statement))
 
     def add(self, entity: ModelT) -> ModelT:

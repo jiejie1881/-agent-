@@ -131,7 +131,7 @@ test('network and server errors show safe messages', async () => {
       './config': { API_BASE_URL: 'http://127.0.0.1:8000/api/driver' },
       './auth': { getToken() { return null }, getSessionVersion() { return 0 }, clearSession() {} }
     }, {
-      wx: { request(options) { response ? options.success(response) : options.fail({ errMsg: 'wx.request:fail' }) } }
+      wx: { request(options) { assert.equal(options.timeout, 30000); response ? options.success(response) : options.fail({ errMsg: 'wx.request:fail' }) } }
     })
     await assert.rejects(request({ url: '/auth/login' }), expected)
   }

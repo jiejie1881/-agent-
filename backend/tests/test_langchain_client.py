@@ -4,10 +4,10 @@ import json
 import httpx
 import pytest
 
+from app.agent.exceptions import AgentModelResponseError
 from app.agent.langchain_client import LangChainModelClient
 from app.agent.model_types import AgentMessageRole, AgentModelMessage
 from app.agent.tool_registry import AgentToolRegistry
-from app.agent.exceptions import AgentModelResponseError
 from tests.test_agent_model_client import _settings
 
 
@@ -22,10 +22,10 @@ def response(message):
         'model': 'test-model', 'choices': [{'index': 0, 'message': message, 'finish_reason': 'stop'}]})
 
 
-def test_langchain_supplies_nine_schemas_and_normalizes_tool_calls():
+def test_langchain_supplies_seven_readonly_schemas_and_normalizes_tool_calls():
     def handler(request):
         body = json.loads(request.content)
-        assert len(body['tools']) == 9
+        assert len(body['tools']) == 7
         assert request.headers['authorization'] == 'Bearer sk-test-secret-key'
         return response({'role': 'assistant', 'content': None, 'tool_calls': [
             {'id': 'call1', 'type': 'function', 'function': {'name': 'list_delivery_demands', 'arguments': '{"date":"2026-10-08"}'}}]})

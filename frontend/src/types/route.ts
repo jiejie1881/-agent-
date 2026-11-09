@@ -16,6 +16,12 @@ export interface TerrainPayload {
 }
 
 export interface Route extends TimestampFields {
+  start_address?: string | null
+  end_address?: string | null
+  geographic_notes?: string | null
+  distance_km?: string | null
+  duration_minutes?: number | null
+  route_data_source?: string | null
   id: number
   code: string
   name: string
@@ -24,6 +30,12 @@ export interface Route extends TimestampFields {
 }
 
 export interface RoutePayload {
+  start_address?: string | null
+  end_address?: string | null
+  geographic_notes?: string | null
+  distance_km?: number | null
+  duration_minutes?: number | null
+  route_data_source?: string | null
   code: string
   name: string
   description: string | null

@@ -30,7 +30,7 @@ const mapPlanId = computed(() => plan.data.value?.orders.some(o => o.details.som
     <div class="context"><span><i />业务日期 {{ date }} · 当前数据快照</span><span>{{ updatedAt ? `最后刷新 ${updatedAt}` : '正在读取业务数据' }}</span></div>
     <div class="stats">
       <DashboardStatCard title="当日配送需求" :value="String(metrics.valid.length)" unit="条" :icon="Tickets" :loading="demands.loading.value" :error="demands.error.value" :description="`有效需求，不含 ${metrics.cancelled} 条已取消需求`" />
-      <DashboardStatCard title="当日配送总货量" :value="formattedQuantity" unit="货量单位" :icon="Box" :loading="demands.loading.value" :error="demands.error.value" description="有效需求 quantity 合计；系统未定义 kg/件" tone="#8b5cf6" />
+      <DashboardStatCard title="当日配送总货量" :value="formattedQuantity" unit="kg" :icon="Box" :loading="demands.loading.value" :error="demands.error.value" description="有效配送需求货量合计，单位 kg" tone="#8b5cf6" />
       <DashboardStatCard title="当日出勤 / 车辆总数" :value="`${vehicles.present} / ${vehicles.total}`" unit="辆" :icon="Van" :loading="fleet.loading.value" :error="fleet.error.value" description="明确登记可出勤 / 全部已录入车辆" tone="#0891b2" />
       <DashboardStatCard title="需求分配率" :value="`${metrics.allocationRate.toFixed(1)}%`" :icon="Connection" :loading="demands.loading.value || plan.loading.value" :error="allocationError" :description="plan.data.value ? `当前${plan.data.value.status === 'DRAFT' ? '草稿' : '已发布'}方案去重已分配 / 有效需求` : '暂无参考方案；零需求时显示 0%'" />
       <DashboardStatCard title="配送完成率" :value="`${metrics.completionRate.toFixed(1)}%`" :icon="CircleCheck" :loading="demands.loading.value" :error="demands.error.value" description="COMPLETED / 有效需求，不使用停靠点签收状态" tone="#10b981" />
@@ -43,7 +43,7 @@ const mapPlanId = computed(() => plan.data.value?.orders.some(o => o.details.som
       <DashboardPanel title="每日异常概况" subtitle="复用每日异常工作台的真实统计口径" :loading="exceptions.loading.value" :error="exceptions.error.value"><template #action><RouterLink to="/dispatch/exceptions" class="text-link">查看全部 →</RouterLink></template><DashboardExceptionPanel v-if="exceptions.data.value" :report="exceptions.data.value" /></DashboardPanel>
       <DashboardPanel title="常用功能" subtitle="根据当前角色提供业务入口"><DashboardQuickActions :plan-id="mapPlanId" /><p class="permission-note">只读账号提供查询入口；业务操作仍由后端校验权限。</p></DashboardPanel>
     </div>
-    <p class="snapshot-note">展示所选日期当前业务记录，不是历史时点快照。数据可能来自 Demo 初始化，请以实际记录为准。</p>
+    <p class="snapshot-note">展示所选日期当前业务记录，不是历史时点快照。统计依据已保存的业务资料和实际状态。</p>
   </section>
 </template>
 <style scoped>

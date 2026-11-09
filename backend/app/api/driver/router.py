@@ -1,6 +1,7 @@
 from datetime import date
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, Query, UploadFile
 
 from app.api.auth_dependencies import DriverUser, require_driver
 from app.api.dependencies import DbSession
@@ -17,7 +18,10 @@ from app.schemas.driver import (
     DriverTaskSummaryResponse,
 )
 from app.services.auth_service import AuthService
+from app.services.delivery_stop_service import DeliveryStopService
 from app.services.driver_service import DriverService
+
+OperationKey = Annotated[str | None, Header(alias='Idempotency-Key',pattern='^[a-f0-9]{32}$')]
 
 router = APIRouter(prefix="/api/driver", tags=["driver"])
 
@@ -65,8 +69,8 @@ def list_today_tasks(current_user: DriverUser, db: DbSession):
 def list_task_history(
     current_user: DriverUser,
     db: DbSession,
-    start_date: date | None = Query(default=None),
-    end_date: date | None = Query(default=None),
+    start_date: date | None = Query(default=None),  # noqa: B008 - FastAPI parameter declaration.
+    end_date: date | None = Query(default=None),  # noqa: B008 - FastAPI parameter declaration.
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ):
@@ -110,9 +114,9 @@ def get_driver_stop(
     response_model=DriverTaskStopResponse,
 )
 def arrive_driver_stop(
-    task_id: int, stop_id: int, current_user: DriverUser, db: DbSession
+    task_id: int, stop_id: int, current_user: DriverUser, db: DbSession, idempotency_key: OperationKey = None
 ):
-    return DriverService(db).arrive_stop(task_id, stop_id, current_user)
+    return DriverService(db).arrive_stop(task_id, stop_id, current_user,idempotency_key)
 
 
 @tasks_router.post(
@@ -125,8 +129,9 @@ def sign_driver_stop(
     data: DeliveryStopSignRequest,
     current_user: DriverUser,
     db: DbSession,
+    idempotency_key: OperationKey = None,
 ):
-    return DriverService(db).sign_stop(task_id, stop_id, data, current_user)
+    return DriverService(db).sign_stop(task_id, stop_id, data, current_user,idempotency_key)
 
 
 @tasks_router.post(
@@ -139,24 +144,28 @@ def fail_driver_stop(
     data: DeliveryStopFailRequest,
     current_user: DriverUser,
     db: DbSession,
+    idempotency_key: OperationKey = None,
 ):
-    return DriverService(db).fail_stop(task_id, stop_id, data, current_user)
+    return DriverService(db).fail_stop(task_id, stop_id, data, current_user,idempotency_key)
 
 
 @tasks_router.post(
     "/tasks/{task_id}/stops/{stop_id}/proofs",
     response_model=DeliveryProofResponse,
 )
-async def upload_driver_stop_proof(
+def upload_driver_stop_proof(
     task_id: int,
     stop_id: int,
     current_user: DriverUser,
     db: DbSession,
-    file: UploadFile = File(...),
+    file: UploadFile = File(...),  # noqa: B008 - FastAPI multipart parameter declaration.
     replaces_proof_id: int | None = Form(default=None, gt=0),
+    idempotency_key: OperationKey = None,
 ):
     max_bytes = get_settings().delivery_proof_max_bytes
-    content = await file.read(max_bytes + 1)
+    # PIL, filesystem and SQL are blocking work; FastAPI runs this sync route
+    # in its worker pool, leaving the event loop free to release other sessions.
+    content = file.file.read(max_bytes + 1)
     return DriverService(db).upload_proof(
         task_id,
         stop_id,
@@ -164,7 +173,13 @@ async def upload_driver_stop_proof(
         content,
         current_user,
         replaces_proof_id,
+        idempotency_key,
     )
+
+
+@tasks_router.get('/operations/{request_key}')
+def get_driver_operation(request_key: str,current_user: DriverUser,db: DbSession):
+    return DeliveryStopService(db).operation_status(request_key,current_user)
 
 
 router.include_router(tasks_router)

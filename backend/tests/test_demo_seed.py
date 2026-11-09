@@ -5,7 +5,7 @@ from app.models.delivery_demand import DeliveryDemand
 from app.models.dispatch_plan import DispatchPlan
 from app.models.user import User
 from app.models.vehicle_attendance import VehicleAttendance
-from app.scripts.seed_demo import DEMO_DATE, seed_demo
+from tests.legacy_support.seed_demo import DEMO_DATE, seed_demo
 
 
 def test_demo_seed_is_idempotent_and_uses_real_dispatch(session):

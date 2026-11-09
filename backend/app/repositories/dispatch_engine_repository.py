@@ -115,9 +115,12 @@ class DispatchEngineRepository:
                 vehicle_type_code=vehicle.vehicle_type.code,
                 vehicle_type_name=vehicle.vehicle_type.name,
                 min_load=vehicle.vehicle_type.min_load,
-                max_load=vehicle.vehicle_type.max_load,
+                max_load=min(vehicle.vehicle_type.max_load, vehicle.rated_load) if vehicle.rated_load else vehicle.vehicle_type.max_load,
+                allowed_route_ids=tuple(vehicle.allowed_route_ids) if vehicle.allowed_route_ids is not None else None,
+                daily_trip_limit=vehicle.daily_trip_limit,
             )
             for vehicle in self.session.scalars(statement)
+            if vehicle.is_active and vehicle.vehicle_type.is_active and vehicle.operating_status == 'ACTIVE'
         ]
 
     def _load_store_routes(
@@ -128,7 +131,8 @@ class DispatchEngineRepository:
         statement = select(StoreRoute).where(StoreRoute.store_id.in_(store_ids))
         result: dict[int, set[int]] = defaultdict(set)
         for link in self.session.scalars(statement):
-            result[link.store_id].add(link.route_id)
+            if link.store.is_active:
+                result[link.store_id].add(link.route_id)
         return dict(result)
 
     def _load_effective_routes(
@@ -154,6 +158,8 @@ class DispatchEngineRepository:
         )
         routes: dict[int, EngineRoute] = {}
         for config in self.session.scalars(statement):
+            if not config.route.is_active:
+                continue
             if config.route_id in routes:
                 continue
             routes[config.route_id] = EngineRoute(

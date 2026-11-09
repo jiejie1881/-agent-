@@ -7,7 +7,7 @@ import type { Route, RoutePayload } from '@/types/route'
 const props = defineProps<{ modelValue: boolean; route: Route | null; submitting: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean]; submit: [RoutePayload] }>()
 const formRef = ref<FormInstance>()
-const form = reactive<RoutePayload>({ code: '', name: '', description: null, is_active: true })
+const form = reactive<RoutePayload>({ code: '', name: '', description: null, is_active: true, start_address:null, end_address:null, geographic_notes:null, distance_km:null, duration_minutes:null, route_data_source:null })
 const title = computed(() => (props.route ? '修改线路' : '新增线路'))
 const rules: FormRules<RoutePayload> = {
   code: [
@@ -24,13 +24,16 @@ watch(() => props.modelValue, (visible) => {
   Object.assign(form, {
     code: props.route?.code ?? '', name: props.route?.name ?? '',
     description: props.route?.description ?? null, is_active: props.route?.is_active ?? true,
+    start_address:props.route?.start_address ?? null, end_address:props.route?.end_address ?? null,
+    geographic_notes:props.route?.geographic_notes ?? null, distance_km:props.route?.distance_km == null ? null : Number(props.route.distance_km),
+    duration_minutes:props.route?.duration_minutes ?? null, route_data_source:props.route?.route_data_source ?? null,
   })
   nextTick(() => formRef.value?.clearValidate())
 })
 
 async function submit() {
   if (!(await formRef.value?.validate().catch(() => false))) return
-  emit('submit', { code: form.code.trim().toUpperCase(), name: form.name.trim(), description: form.description?.trim() || null, is_active: form.is_active })
+  emit('submit', { ...form, code: form.code.trim().toUpperCase(), name: form.name.trim(), description: form.description?.trim() || null, is_active: form.is_active })
 }
 </script>
 
@@ -41,6 +44,13 @@ async function submit() {
       <el-form-item label="线路名称" prop="name"><el-input v-model="form.name" maxlength="100" /></el-form-item>
       <el-form-item label="说明" prop="description"><el-input v-model="form.description" type="textarea" :rows="3" maxlength="500" show-word-limit /></el-form-item>
       <el-form-item label="启用状态"><el-switch v-model="form.is_active" active-text="启用" inactive-text="停用" /></el-form-item>
+      <el-form-item label="起点地址"><el-input v-model="form.start_address" maxlength="255" /></el-form-item>
+      <el-form-item label="终点地址"><el-input v-model="form.end_address" maxlength="255" /></el-form-item>
+      <el-form-item label="地理说明"><el-input v-model="form.geographic_notes" type="textarea" maxlength="2000" /></el-form-item>
+      <el-form-item label="距离 km"><el-input-number v-model="form.distance_km" :min="0" :precision="2" /></el-form-item>
+      <el-form-item label="时间 分钟"><el-input-number v-model="form.duration_minutes" :min="0" :max="100000" :precision="0" /></el-form-item>
+      <el-form-item label="数据来源"><el-input v-model="form.route_data_source" maxlength="100" placeholder="填写距离或时间时必填，例如实测或人工录入" /></el-form-item>
+      <p>系统不根据经纬度计算道路距离；这里的距离和时间由业务人员提供。</p>
     </el-form>
     <template #footer><el-button :disabled="submitting" @click="emit('update:modelValue', false)">取消</el-button><el-button type="primary" :loading="submitting" @click="submit">保存</el-button></template>
   </el-dialog>

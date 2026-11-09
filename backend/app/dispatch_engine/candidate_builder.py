@@ -57,6 +57,9 @@ class CandidateBuilder:
                 ):
                     continue
                 for vehicle in vehicles:
+                    if vehicle.allowed_route_ids is not None and route.id not in vehicle.allowed_route_ids:
+                        reasons[demand.id].add('线路不在车辆可运行范围')
+                        continue
                     if not self.terrain_constraint.is_satisfied(
                         vehicle, route, permissions
                     ):

@@ -27,13 +27,13 @@ function setup(getProfile = async () => ({ username: 'actual_driver', vehicle: n
   }
   const globals = { wx, getApp: () => app }
   const auth = load('utils/auth.js', {}, globals)
-  auth.setSession({ access_token: 'first', refresh_token: 'refresh', user: { username: 'actual_driver' } })
+  auth.setSession({ access_token: 'first', refresh_token: 'refresh', user: { id: 1, username: 'actual_driver' } })
   app.globalData.user = { username: 'actual_driver' }
   let definition
   load('pages/profile/index.js', { '../../services/auth': { getProfile }, '../../utils/auth': auth }, { ...globals, Page(value) { definition = value } })
   const page = { ...definition, data: { ...definition.data }, setData(value) { Object.assign(this.data, value) } }
   const request = load('utils/request.js', { './auth': auth, './config': { API_BASE_URL: 'http://example.invalid' } }, globals)
-  const task = load('services/task.js', { '../utils/auth': auth, '../utils/request': request, '../utils/config': { API_BASE_URL: 'http://example.invalid' } }, globals)
+  const task = load('services/task.js', { '../utils/operation': require('../utils/operation'), '../utils/auth': auth, '../utils/request': request, '../utils/config': { API_BASE_URL: 'http://example.invalid' } }, globals)
   return { auth, page, request, task, calls, storage, app, wx }
 }
 test('profile renders real fields and handles unbound vehicle', async () => {

@@ -65,5 +65,7 @@ class DailyExceptionReportResponse(BaseModel):
     pending_outside_reference_plan: ExampleSectionResponse[PendingExampleResponse]
     plan_vehicle_unavailable: ExampleSectionResponse[VehicleUnavailableExampleResponse]
     failed_stops: ExampleSectionResponse[FailedStopExampleResponse]
+    receipt_issues: ExampleSectionResponse[dict]
+    state_conflicts: ExampleSectionResponse[dict]
     notices: list[str]
     note: str

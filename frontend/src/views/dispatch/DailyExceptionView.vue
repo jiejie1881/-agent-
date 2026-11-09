@@ -37,6 +37,11 @@ function issueLabel(issue: string): string {
   return labels[issue] || issue
 }
 
+const failureLabels: Record<string, string> = {
+  STORE_CLOSED: '门店关闭', REJECTED: '门店拒收', ADDRESS_ERROR: '地址错误',
+  CARGO_DAMAGED: '货物损坏', OTHER: '其他',
+}
+
 async function fetchReport(version: number) {
   if (!selectedDate.value) return
   loading.value = true
@@ -128,6 +133,13 @@ onMounted(loadDate)
         </div>
 
         <div class="section-grid">
+          <el-card shadow="never"><template #header>签收回单异常 <el-tag type="warning">{{ report.receipt_issues?.count ?? 0 }}</el-tag></template>
+            <el-table :data="report.receipt_issues?.examples ?? []" empty-text="没有回单异常"><el-table-column prop="object_id" label="业务记录 ID" /><el-table-column prop="category" label="类别" /><el-table-column prop="store_name" label="门店" /><el-table-column prop="message" label="事实" /></el-table>
+            <router-link to="/dispatch/exception-cases">登记并处理异常工单</router-link>
+          </el-card>
+          <el-card shadow="never"><template #header>业务状态冲突 <el-tag type="danger">{{ report.state_conflicts?.count ?? 0 }}</el-tag></template>
+            <el-table :data="report.state_conflicts?.examples ?? []" empty-text="没有状态冲突"><el-table-column prop="object_id" label="停靠点 ID" /><el-table-column prop="store_name" label="门店" /><el-table-column prop="message" label="事实" /></el-table>
+          </el-card>
           <el-card shadow="never">
             <template #header>方案内未分配需求 <el-tag type="danger">{{ report.plan_unassigned.count }}</el-tag></template>
             <el-table :data="report.plan_unassigned.examples" empty-text="没有未分配需求">
@@ -171,7 +183,9 @@ onMounted(loadDate)
               <el-table-column prop="vehicle_plate" label="车辆" min-width="100" />
               <el-table-column label="实际执行司机" min-width="140"><template #default="{ row }">{{ row.actual_driver_name || '历史未记录' }}<br>{{ businessRef('DRV', row.actual_driver_id) }}</template></el-table-column>
               <el-table-column prop="arrived_at" label="到店时间" min-width="170" />
-              <el-table-column prop="failure_reason" label="失败原因" min-width="130" />
+              <el-table-column label="失败原因" min-width="130">
+                <template #default="{ row }"><span :title="row.failure_reason">{{ failureLabels[row.failure_reason] ?? row.failure_reason ?? '—' }}</span></template>
+              </el-table-column>
             </el-table>
             <p v-if="report.failed_stops.truncated" class="truncation">仅显示前 20 条。</p>
           </el-card>

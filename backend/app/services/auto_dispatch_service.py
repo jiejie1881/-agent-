@@ -21,6 +21,7 @@ from app.schemas.auto_dispatch import (
     UnassignedDemandResponse,
 )
 from app.services.delivery_demand_status_service import DeliveryDemandStatusService
+from app.services.dispatch_date_guard_service import lock_dispatch_date
 from app.models.user import User
 from app.services.audit_log_service import AuditAction, AuditLogService
 
@@ -37,21 +38,28 @@ class AutoDispatchService:
         scheduling = DriverSchedulingService(self.session)
         from app.services.driver_leave_service import DriverLeaveService
         DriverLeaveService(self.session).lock_resources()
+        lock_dispatch_date(self.session, data.date)
         engine_input = self.repository.load(data.date)
         trips, unassigned = [], []
+        from collections import Counter
+        daily_counts = Counter()
         for period in DeliveryPeriod:
             eligible = []
             excluded = []
             for vehicle in engine_input.vehicles:
+                if vehicle.daily_trip_limit is not None and daily_counts[vehicle.id] >= vehicle.daily_trip_limit:
+                    excluded.append(f'车辆#{vehicle.id}: DAILY_TRIP_LIMIT_EXCEEDED: 已达到日趟次限制')
+                    continue
                 try:
                     scheduling.resolve(data.date, period.value, vehicle.id)
-                    eligible.append(vehicle)
+                    eligible.append(replace(vehicle, daily_trip_limit=vehicle.daily_trip_limit - daily_counts[vehicle.id]) if vehicle.daily_trip_limit is not None else vehicle)
                 except BusinessError as exc:
                     excluded.append(f"车辆#{vehicle.id}: {exc.code}: {exc.message}")
                     continue
             demands = tuple(d for d in engine_input.demands if d.period == period)
             partial = self.engine.dispatch(replace(engine_input, demands=demands, vehicles=tuple(eligible)))
             trips.extend(partial.trips)
+            daily_counts.update(t.vehicle.id for t in partial.trips)
             if not eligible and engine_input.vehicles:
                 unassigned.extend(UnassignedDemand(d, ("所有出勤候选车辆均未通过司机可用性校验", *excluded)) for d in demands)
             else:

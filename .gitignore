@@ -40,10 +40,21 @@ backend/.local/
 *.sqlite3-shm
 *.sqlite3-wal
 *.sqlite3-journal
+*.pem
+*.key
+backups/
+*.dump
 local-credentials/
 docs/local/
 .validation-v11/
+.proxy-diagnostics/
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
+# Private demonstration credentials and local presentation build products.
+**/DEMO_ACCOUNTS.md
+/ppt_materials/.build/
+/ppt_materials/.build-driver/
+# Step 13A disposable database credentials; public evidence stays reviewable.
+backend/tmp/step13a-*/continuation-private.json

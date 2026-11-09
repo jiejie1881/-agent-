@@ -95,6 +95,12 @@ def test_regeneration_increments_version_and_preserves_published_plan(client):
     assert second_body["plan_id"] != first["plan_id"]
     assert second_body["trips"] == []
 
+    rejected = client.post(
+        f"/api/v1/dispatch-plans/{second_body['plan_id']}/publish"
+    )
+    assert rejected.status_code == 409
+    assert rejected.json()["issues"][0]["code"] == "NO_DISPATCH_ORDERS"
+
     original = client.get(f"/api/v1/dispatch-plans/{first['plan_id']}")
     assert original.status_code == 200
     assert original.json()["status"] == "PUBLISHED"
@@ -151,7 +157,7 @@ def test_history_and_specific_version_can_be_queried(client):
 
 
 def test_publishing_new_version_cancels_previous_published_plan(client):
-    setup_dispatchable_data(client)
+    original_demand = setup_dispatchable_data(client)
     first = client.post(
         "/api/v1/auto-dispatch", json={"date": "2026-09-24"}
     ).json()
@@ -159,9 +165,20 @@ def test_publishing_new_version_cancels_previous_published_plan(client):
         f"/api/v1/dispatch-plans/{first['plan_id']}/publish"
     ).status_code == 200
 
+    new_demand = client.post(
+        "/api/v1/delivery-demands",
+        json={
+            "date": "2026-09-24",
+            "store_id": original_demand["store_id"],
+            "period": "AFTERNOON",
+            "quantity": 350,
+        },
+    )
+    assert new_demand.status_code == 201
     second = client.post(
         "/api/v1/auto-dispatch", json={"date": "2026-09-24"}
     ).json()
+    assert len(second["trips"]) == 1
     published = client.post(
         f"/api/v1/dispatch-plans/{second['plan_id']}/publish"
     )

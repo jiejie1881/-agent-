@@ -4,6 +4,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from app.domain.enums import AgentPendingActionStatus
+from app.agent.task_plan import ExecutionReport
 
 
 class AgentPendingActionSnapshot(BaseModel):
@@ -29,3 +30,4 @@ class AgentChatResult(BaseModel):
     tool_calls_count: int
     used_tools: tuple[str, ...] = ()
     pending_actions: tuple[AgentPendingActionSnapshot, ...] = ()
+    execution: ExecutionReport | None = None

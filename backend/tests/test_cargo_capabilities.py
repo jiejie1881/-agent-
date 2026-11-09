@@ -47,7 +47,7 @@ def test_delivery_demand_create_and_edit_without_categories(client, session):
 
 def test_only_core_dispatch_constraints_remain():
     names = {type(item).__name__ for item in DEFAULT_CONSTRAINTS}
-    assert names == {"VehicleAvailableConstraint", "PeriodConstraint", "TerrainConstraint", "RouteConstraint", "LoadConstraint"}
+    assert names == {"OperatingConstraint", "VehicleAvailableConstraint", "PeriodConstraint", "TerrainConstraint", "RouteConstraint", "LoadConstraint"}
 
 
 def test_urgent_demand_is_dispatched_first(client):

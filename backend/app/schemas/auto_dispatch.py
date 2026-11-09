@@ -17,7 +17,7 @@ class DispatchVehicleResponse(BaseModel):
     code: str
     plate_number: str
     vehicle_type_id: int
-    vehicle_type_code: VehicleTypeCode
+    vehicle_type_code: str
     vehicle_type_name: str
 
 

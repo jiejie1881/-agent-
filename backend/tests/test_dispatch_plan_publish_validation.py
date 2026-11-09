@@ -57,6 +57,24 @@ def test_valid_draft_plan_can_be_published(client):
     assert response.json()["status"] == "PUBLISHED"
 
 
+def test_draft_with_only_unassigned_demands_cannot_be_published(client):
+    terrain, _, stores = create_terrain_route_and_stores(client, [9000])
+    create_vehicle(client, terrain["id"], "SMALL_VAN", "小型厢式", 100, 750, "湘A001")
+    result = client.post("/api/v1/auto-dispatch", json={"date": "2026-09-24"})
+    assert result.status_code == 200
+    generated = result.json()
+    assert not generated["trips"]
+    assert generated["unassigned_demands"]
+
+    plan_url = f"/api/v1/dispatch-plans/{generated['plan_id']}"
+    response = client.post(f"{plan_url}/publish")
+    assert response.status_code == 409
+    assert issue_codes(response) == {"NO_DISPATCH_ORDERS"}
+    assert client.get(plan_url).json()["status"] == "DRAFT"
+    demand = client.get(f"/api/v1/delivery-demands/{stores[0][1]['id']}").json()
+    assert demand["status"] == "PENDING"
+
+
 def test_vehicle_becoming_unavailable_blocks_publish_and_rolls_back(client):
     data = setup_draft_plan(client)
     attendances = client.get(

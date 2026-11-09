@@ -1,6 +1,7 @@
 from datetime import date
+from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, ForeignKey, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database.base import Base
@@ -15,6 +16,12 @@ class Route(TimestampMixin, Base):
     code: Mapped[str] = mapped_column(String(50), index=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    start_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    end_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    geographic_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    distance_km: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    duration_minutes: Mapped[int | None] = mapped_column(nullable=True)
+    route_data_source: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     store_links: Mapped[list["StoreRoute"]] = relationship(

@@ -25,13 +25,18 @@ def test_vehicle_type_crud_and_load_validation(client):
     assert updated.json()["max_load"] == "820.00"
 
 
-def test_vehicle_type_rejects_unknown_code(client):
+def test_vehicle_type_allows_business_defined_code(client):
     response = client.post(
         "/api/v1/vehicle-types",
         json={"code": "OTHER", "name": "其他车型", "min_load": 1, "max_load": 100},
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 201
+    assert response.json()['code'] == 'OTHER'
+
+def test_vehicle_type_rejects_invalid_business_code(client):
+    response=client.post('/api/v1/vehicle-types',json={'code':'../bad code','name':'非法编码','min_load':1,'max_load':100})
+    assert response.status_code==422
 
 
 def test_vehicle_type_cannot_be_deleted_when_used(client):

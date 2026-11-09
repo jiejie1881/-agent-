@@ -44,12 +44,33 @@ class AgentModelMessage(BaseModel):
         return self
 
 
+class AgentNetworkEvent(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    event: str
+    elapsed_ms: float = Field(ge=0)
+
+
+class AgentTokenUsage(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    input_tokens: int = Field(ge=0, strict=True)
+    output_tokens: int = Field(ge=0, strict=True)
+    total_tokens: int = Field(ge=0, strict=True)
+
+    @model_validator(mode="after")
+    def consistent_total(self):
+        if self.total_tokens != self.input_tokens + self.output_tokens:
+            raise ValueError("Token usage total mismatch")
+        return self
+
+
 class AgentModelResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     content: str | None = None
     tool_calls: tuple[AgentToolCall, ...] = ()
     finish_reason: str | None = None
+    token_usage: AgentTokenUsage | None = None
+    network_events: tuple[AgentNetworkEvent, ...] = ()
 
     @property
     def has_tool_calls(self) -> bool:

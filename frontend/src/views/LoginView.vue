@@ -20,6 +20,11 @@ async function submit() {
   loading.value = true
   try {
     await authStore.login(form.username.trim(), form.password)
+    if (authStore.user?.role === 'DRIVER') {
+      authStore.logout()
+      ElMessage.warning('司机账号请使用司机端登录，不能进入调度管理后台')
+      return
+    }
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
     await router.replace(redirect)
   } catch {

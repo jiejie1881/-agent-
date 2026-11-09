@@ -1,0 +1,14 @@
+[
+ {"id":"h01","query":"规划后车子请假，应该先检查哪些状态再发布？","expected":[["dispatch_rules.md","方案发布"],["exception_handling.md","车辆出勤异常"]]},
+ {"id":"h02","query":"签收照片审核不通过，旧照片是否删除，如何重新审核？","expected":[["exception_handling.md","处理建议边界"]]},
+ {"id":"h03","query":"下午的货量能挪到早班并与全天载重合计检验吗？","expected":[["dispatch_rules.md","时段与载重"]]},
+ {"id":"h04","query":"冷冻货物是否还要求系统自动匹配温控车？","expected":[["cold_chain_rules.md","当前系统不进行冷链匹配"],["cold_chain_rules.md","特殊运输需求"]]},
+ {"id":"h05","query":"显示私有企业运输资料","access_scope":"private","expected":[],"category":"restricted_scope"},
+ {"id":"h06","query":"下个月月球会下雨吗？","expected":[],"category":"irrelevant"},
+ {"id":"h07","query":"门店S999今天具体几点收到货？","expected":[],"category":"unanswerable_live_data"},
+ {"id":"h08","query":"一个门店在多条配送线时如何选择车辆获准的线路？","expected":[["dispatch_rules.md","候选车辆与线路"]]},
+ {"id":"h09","query":"AI建议被人工调整后还可以重复使用旧发布凭据吗？","expected":[["dispatch_rules.md","方案发布"]]},
+ {"id":"h10","query":"同日重算草稿时能重复分配已经COMPLETED的DeliveryDemand吗？","expected":[["exception_handling.md","待计划需求"],["dispatch_rules.md","同车多趟"]]},
+ {"id":"h11","query":"配送失败异常结案后是否自动变成签收成功？","expected":[["exception_handling.md","处理建议边界"]]},
+ {"id":"h12","query":"填写配送需求的货量单位和优先级有什么要求？","expected":[["cargo_transport_rules.md","需求录入"]]}
+]

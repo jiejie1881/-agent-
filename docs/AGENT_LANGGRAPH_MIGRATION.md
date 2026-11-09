@@ -1,5 +1,7 @@
 # Agent LangChain / LangGraph 迁移记录
 
+> 当前核验入口（2026-10-10）：原迁移阶段记录保留为历史证据，不代表当前发布状态。`1c59467` 已纳入 Dashboard、小程序及 Demo 相关源码；`8276cc2` 已修正历史 DDL 与模型元数据差异。本轮 486 tests / MySQL alembic check PASS。受控演示数据发送授权已获得，真实普通对话、业务工具、RAG、混合、多轮及 HITL API 已验证。用户手动启动 Docker 后，Vue 主要流程及真实连接/事务故障探针已执行；浏览器断网/超时与部分权限/过期交互仍待核验，当前 NOT READY，详见[最终报告](../GITHUB_RELEASE_FINAL_REPORT.md)。
+
 ## 提交范围与不变边界
 
 本轮仅在 `codex/agent-langchain-langgraph` 分支开发。保留稳定 Tag，不 push、不修改已执行历史迁移、不删除既有业务数据。
@@ -49,7 +51,7 @@ Vue Agent Chat → FastAPI / JWT / RBAC → AgentConversationService + AgentServ
 
 Dockerfile 预先创建并授权 agent_data 目录，避免非 root 用户挂载新 volume 后无法写入。容器持久化目录与回单、Chroma 分开。
 
-## 验证记录与限制
+## 原迁移阶段验证记录与限制（历史，不代表当前发布状态）
 
 最终验证：完整工作树 **485 passed**；仅包含提交范围的独立快照 **476 passed**（另9项未提交 Compact Demo 测试不在快照内）。本轮新增37项模型适配、行为等价、Checkpoint、API、HITL和隔离测试全部通过，未删除原测试。
 

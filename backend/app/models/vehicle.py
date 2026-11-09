@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, Enum, ForeignKey, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, Enum, ForeignKey, JSON, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database.base import Base
@@ -13,16 +13,7 @@ class VehicleType(TimestampMixin, Base):
     __table_args__ = (UniqueConstraint("code"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[VehicleTypeCode] = mapped_column(
-        Enum(
-            VehicleTypeCode,
-            native_enum=False,
-            create_constraint=True,
-            validate_strings=True,
-            name="vehicle_type_code",
-        ),
-        index=True,
-    )
+    code: Mapped[str] = mapped_column(String(50), index=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
     min_load: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     max_load: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
@@ -41,6 +32,11 @@ class Vehicle(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(50), index=True)
     plate_number: Mapped[str] = mapped_column(String(20), index=True)
+    organization: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    rated_load: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    daily_trip_limit: Mapped[int | None] = mapped_column(nullable=True)
+    operating_status: Mapped[str] = mapped_column(String(20), default="ACTIVE", server_default="ACTIVE", nullable=False)
+    allowed_route_ids: Mapped[list[int] | None] = mapped_column(JSON, nullable=True)
     vehicle_type_id: Mapped[int] = mapped_column(
         ForeignKey("vehicle_types.id", ondelete="RESTRICT"), index=True
     )

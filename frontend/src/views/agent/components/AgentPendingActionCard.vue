@@ -23,6 +23,12 @@ const statusType = computed(() => ({
   PENDING: 'warning', EXECUTED: 'success', CANCELLED: 'info', EXPIRED: 'info', FAILED: 'danger', CONFIRMED: 'primary',
 }[props.action.status] as 'warning' | 'success' | 'info' | 'danger' | 'primary'))
 
+// This fingerprint is an internal consistency check, not a business field or
+// an authorization decision. The backend still validates it on confirmation.
+const displayData = computed(() => Object.fromEntries(
+  Object.entries(props.action.display_data).filter(([key]) => key !== 'approval_fingerprint'),
+))
+
 function displayValue(value: unknown) {
   return value === null || value === undefined ? '-' : String(value)
 }
@@ -38,7 +44,7 @@ function displayValue(value: unknown) {
     </template>
     <p class="action-card__summary">{{ action.summary }}</p>
     <dl>
-      <template v-for="(value, key) in action.display_data" :key="key">
+      <template v-for="(value, key) in displayData" :key="key">
         <dt>{{ key }}</dt><dd>{{ displayValue(value) }}</dd>
       </template>
     </dl>

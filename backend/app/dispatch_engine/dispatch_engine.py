@@ -140,6 +140,8 @@ class DispatchEngine:
         proposals: list[tuple[tuple, EngineVehicle, EngineRoute, tuple]] = []
 
         for vehicle in vehicles:
+            if vehicle.daily_trip_limit is not None and sum(count for (vehicle_id,_),count in vehicle_trip_counts.items() if vehicle_id == vehicle.id) >= vehicle.daily_trip_limit:
+                continue
             for route in routes.values():
                 candidate_demands = [
                     demand

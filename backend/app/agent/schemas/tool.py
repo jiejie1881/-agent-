@@ -2,21 +2,38 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import date as Date
-from typing import Any
+from typing import Any, get_args
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 from app.domain.enums import DeliveryPeriod
 from app.domain.permissions import Permission
 from app.schemas.common import PaginationParams
 
 
+def _strict_integer_field(value: Any, info: ValidationInfo, model: type[BaseModel]) -> Any:
+    annotation = model.model_fields[info.field_name].annotation
+    if (annotation is int or int in get_args(annotation)) and value is not None and type(value) is not int:
+        raise ValueError('整数参数必须为JSON整数，不接受布尔值、数字字符串或小数')
+    return value
+
+
 class StrictToolArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator('*', mode='before')
+    @classmethod
+    def require_integer_types(cls, value: Any, info: ValidationInfo) -> Any:
+        return _strict_integer_field(value, info, cls)
 
 
 class PaginatedToolArgs(PaginationParams):
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator('*', mode='before')
+    @classmethod
+    def require_integer_types(cls, value: Any, info: ValidationInfo) -> Any:
+        return _strict_integer_field(value, info, cls)
 
 
 class ListDeliveryDemandsArgs(PaginatedToolArgs):
@@ -74,6 +91,7 @@ class CancelDispatchPlanArgs(PlanIdToolArgs):
 
 
 class SearchKnowledgeBaseArgs(StrictToolArgs):
+    knowledge_base_id: int | None = Field(default=None, gt=0, description="可选知识库ID；服务端按当前用户校验权限")
     query: str = Field(
         min_length=1,
         max_length=500,

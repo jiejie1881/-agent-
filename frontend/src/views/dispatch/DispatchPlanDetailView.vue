@@ -19,12 +19,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 import {
   cancelDispatchPlan,
+  confirmAgentPublish,
   completeDispatchOrder,
   getDispatchPlan,
+  getAgentPublishPreview,
   moveDispatchDemand,
+  moveAgentDispatchDemand,
   publishDispatchPlan,
   startDispatchOrder,
 } from '@/api/dispatch-plans'
+import type { AgentPublishPreview } from '@/api/dispatch-plans'
 import type { ApiError, ApiErrorIssue } from '@/api/http'
 import type {
   DispatchPlanDetail,
@@ -50,6 +54,8 @@ const cancelling = ref(false)
 const actionLoadingOrderId = ref<number | null>(null)
 const plan = ref<DispatchPlanDetail | null>(null)
 const qualitySnapshot = ref<QualityReport | null>(null)
+const agentPreview = ref<AgentPublishPreview | null>(null)
+const agentPreviewError = ref('')
 const qualityError = ref('')
 const selectedDemand = ref('')
 const selectedTargetOrderId = ref<number>()
@@ -88,9 +94,15 @@ const statusMeta: Record<
   },
 }
 
-const currentStatus = computed(() =>
-  plan.value ? statusMeta[plan.value.status] : statusMeta.DRAFT,
-)
+const currentStatus = computed(() => {
+  if (plan.value?.status === 'DRAFT' && plan.value.source === 'AGENT') {
+    return {
+      ...statusMeta.DRAFT,
+      message: '该 Agent 草稿尚未发布。管理员可人工调整并重新校验，发布前须核对最新预览并确认。',
+    }
+  }
+  return plan.value ? statusMeta[plan.value.status] : statusMeta.DRAFT
+})
 
 const assignedDemandCount = computed(() => {
   const ids = new Set(
@@ -181,6 +193,11 @@ async function loadPlan() {
   loading.value = true
   try {
     plan.value = (await getDispatchPlan(planId.value)).data
+    agentPreview.value = null; agentPreviewError.value = ''
+    if (plan.value.source === 'AGENT' && plan.value.status === 'DRAFT' && authStore.canOperate) {
+      try { agentPreview.value = (await getAgentPublishPreview(planId.value)).data }
+      catch { agentPreviewError.value = 'Agent 发布预览加载失败，请刷新后重试。' }
+    }
     qualitySnapshot.value = null; qualityError.value = ''
     try { qualitySnapshot.value = (await latestQualityReport(planId.value)).data }
     catch { qualityError.value = '质量报告加载失败，不影响方案详情；请到报告页重试。' }
@@ -218,13 +235,16 @@ async function handleMoveDemand() {
 
   moving.value = true
   try {
-    plan.value = (
-      await moveDispatchDemand(plan.value.id, {
+    const payload = {
         delivery_demand_id: demand.demandId,
         source_order_id: demand.orderId,
         target_order_id: targetOrderId,
-      })
-    ).data
+    }
+    if (plan.value.source === 'AGENT') {
+      if (!agentPreview.value?.plan_sha256) throw new Error('请刷新发布预览后重新确认调整')
+      plan.value = (await moveAgentDispatchDemand(plan.value.id,{...payload,expected_plan_sha256:agentPreview.value.plan_sha256})).data
+      agentPreview.value = (await getAgentPublishPreview(plan.value.id)).data
+    } else plan.value = (await moveDispatchDemand(plan.value.id,payload)).data
     resetAdjustmentSelection()
     ElMessage.success('需求已移动，方案载重已重新计算')
   } catch (error) {
@@ -235,7 +255,7 @@ async function handleMoveDemand() {
 }
 
 async function handlePublish() {
-  if (!plan.value || anyMutationPending.value) return
+  if (!plan.value || plan.value.source === 'AGENT' || anyMutationPending.value) return
   try {
     await ElMessageBox.confirm(
       `确认发布 ${plan.value.delivery_date} V${plan.value.version}？后端将执行发布前全量校验。`,
@@ -254,6 +274,42 @@ async function handlePublish() {
     ElMessage.success('派车方案已发布')
   } catch (error) {
     showBusinessIssues(error as ApiError, '方案发布校验失败')
+  } finally {
+    publishing.value = false
+  }
+}
+
+async function handleAgentPublish() {
+  if (!plan.value || plan.value.source !== 'AGENT' || plan.value.status !== 'DRAFT' ||
+      !agentPreview.value?.can_confirm_publish || !agentPreview.value.confirmation_receipt ||
+      !authStore.canOperate || anyMutationPending.value) return
+  const target = plan.value
+  const receipt = agentPreview.value.confirmation_receipt
+  try {
+    await ElMessageBox.confirm(
+      `确认正式发布 ${target.delivery_date} V${target.version}？发布后司机端可读取并执行任务。`,
+      '人工确认 Agent 方案',
+      { confirmButtonText: '确认正式发布', cancelButtonText: '取消', type: 'warning' },
+    )
+  } catch { return }
+  publishing.value = true
+  try {
+    await confirmAgentPublish(target.id, receipt, crypto.randomUUID())
+    await loadPlan()
+    ElMessage.success('Agent 方案已正式发布')
+  } catch (error) {
+    try {
+      const latest = (await getDispatchPlan(target.id)).data
+      plan.value = latest
+      if (latest.status === 'PUBLISHED') {
+        ElMessage.success('发布已完成，状态已恢复')
+      } else {
+        await loadPlan()
+        showBusinessIssues(error as ApiError, 'Agent 方案发布失败')
+      }
+    } catch {
+      showBusinessIssues(error as ApiError, 'Agent 方案发布失败，请刷新后核对状态')
+    }
   } finally {
     publishing.value = false
   }
@@ -358,7 +414,22 @@ onMounted(loadPlan)
         <el-button type="danger" plain :icon="Close" :loading="cancelling" :disabled="anyMutationPending && !cancelling" @click="handleCancel">取消方案</el-button>
       </div>
 
-      <el-card v-if="plan.status === 'DRAFT' && authStore.canOperate" class="adjustment-card" shadow="never">
+      <el-alert v-if="plan.source === 'AGENT' && plan.status === 'DRAFT'"
+        title="这是 Agent 采纳草稿。管理员调整后系统重新校验；正式发布须核对最新预览并人工确认。"
+        type="warning" :closable="false" />
+      <el-card v-if="plan.source === 'AGENT' && plan.status === 'DRAFT' && authStore.canOperate" shadow="never">
+        <h2>Agent 发布预览</h2>
+        <p v-if="agentPreviewError">{{ agentPreviewError }}</p>
+        <template v-else-if="agentPreview">
+          <p>{{ agentPreview.stale ? '业务数据已变化，须重新规划。' : '业务快照与保存后的基线一致。' }}规则问题 {{ agentPreview.validation_issues.length }} 项。</p>
+          <p v-for="issue in agentPreview.validation_issues" :key="`${issue.code}-${issue.message}`">{{ issue.code }}：{{ issue.message }}</p>
+          <el-button type="success" :loading="publishing"
+            :disabled="!agentPreview.can_confirm_publish || !agentPreview.confirmation_receipt || anyMutationPending"
+            @click="handleAgentPublish">人工确认并正式发布</el-button>
+          <p v-if="!agentPreview.can_confirm_publish">当前不能发布：请检查功能开关、快照和规则问题。</p>
+        </template>
+      </el-card>
+      <el-card v-if="plan.status === 'DRAFT' && (plan.source === 'AGENT' ? agentPreview?.can_adjust_draft : authStore.canOperate)" class="adjustment-card" shadow="never">
         <template #header>
           <div class="adjustment-header">
             <div>
@@ -366,6 +437,7 @@ onMounted(loadPlan)
               <p>选择一个已分配需求和目标任务，提交后由后端重新执行全部业务规则校验。</p>
             </div>
             <el-button
+              v-if="plan.source !== 'AGENT'"
               type="success"
               :icon="Promotion"
               :loading="publishing"

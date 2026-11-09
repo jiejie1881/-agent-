@@ -10,11 +10,9 @@ from app.agent.exceptions import (
 from app.agent.schemas.tool import (
     GET_VEHICLE_ATTENDANCE_DEFINITION,
     LIST_DELIVERY_DEMANDS_DEFINITION,
-    GetVehicleAttendanceArgs,
     ListDeliveryDemandsArgs,
 )
 from app.agent.tool_registry import AgentToolRegistry
-
 
 EXPECTED_TOOL_NAMES = [
     "list_delivery_demands",
@@ -24,8 +22,6 @@ EXPECTED_TOOL_NAMES = [
     "get_unassigned_demands",
     "validate_dispatch_plan",
     "search_knowledge_base",
-    "move_delivery_demand",
-    "cancel_dispatch_plan",
 ]
 
 
@@ -117,7 +113,7 @@ def test_openai_tools_preserve_registry_order_and_schema() -> None:
 
     tools = registry.to_openai_tools()
 
-    assert len(tools) == 9
+    assert len(tools) == 7
     assert [tool["function"]["name"] for tool in tools] == EXPECTED_TOOL_NAMES
     assert all(tool["type"] == "function" for tool in tools)
     assert all(tool["function"]["parameters"]["type"] == "object" for tool in tools)

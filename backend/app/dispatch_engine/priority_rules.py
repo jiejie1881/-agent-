@@ -29,7 +29,7 @@ class PriorityRules:
     ) -> bool:
         code = vehicle.vehicle_type_code
         return (
-            trip_counts[(period, code)] < self.minimum_trip_targets[code]
+            trip_counts[(period, code)] < self.minimum_trip_targets.get(code, 0)
         )
 
     def vehicle_sort_key(
@@ -62,4 +62,4 @@ class PriorityRules:
             return self.target_priority[code]
         if unmet_codes:
             return len(self.target_priority)
-        return self.normal_priority[code]
+        return self.normal_priority.get(code, len(self.normal_priority))

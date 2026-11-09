@@ -1,4 +1,5 @@
 from decimal import Decimal
+from collections import Counter
 
 from app.domain.constraints import LoadConstraint
 from app.domain.enums import DeliveryDemandStatus
@@ -24,10 +25,16 @@ class DispatchPlanPublicationValidator:
         self.load_constraint = LoadConstraint()
 
     def validate(self, plan: DispatchPlan, *, for_update: bool = True) -> list[dict[str, object]]:
+        if not plan.orders:
+            return [{"code": "NO_DISPATCH_ORDERS", "message": "方案没有可执行的配送任务，不能发布"}]
+
         issues: list[dict[str, object]] = []
         first_assignment: dict[int, int] = {}
+        trips = Counter(order.vehicle_id for order in plan.orders)
 
         for order in sorted(plan.orders, key=lambda item: item.id):
+            if order.vehicle.daily_trip_limit is not None and trips[order.vehicle_id] > order.vehicle.daily_trip_limit:
+                issues.append(self._issue("VEHICLE_DAILY_TRIP_LIMIT", "车辆当天任务数量超过每日上限", order.id))
             try:
                 driver = DriverSchedulingService(self.validation_service.session).resolve(
                     plan.delivery_date, order.period.value, order.vehicle_id, for_update=for_update
@@ -151,7 +158,7 @@ class DispatchPlanPublicationValidator:
         load_result = self.load_constraint.validate_load(
             actual_load,
             order.vehicle.vehicle_type.min_load,
-            order.vehicle.vehicle_type.max_load,
+            min(order.vehicle.vehicle_type.max_load, order.vehicle.rated_load) if order.vehicle.rated_load is not None else order.vehicle.vehicle_type.max_load,
         )
         if not load_result.passed:
             issues.append(

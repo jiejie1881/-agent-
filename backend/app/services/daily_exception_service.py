@@ -8,6 +8,7 @@ from app.domain.enums import (
     DeliveryDemandStatus,
     DeliveryStopStatus,
     DispatchPlanStatus,
+    DeliveryProofReviewStatus,
 )
 from app.domain.exceptions import ConflictError, NotFoundError
 from app.repositories.daily_exception_repository import DailyExceptionRepository
@@ -53,6 +54,8 @@ class DailyExceptionService:
         unavailable = []
         failed_stops = []
         unassigned = []
+        receipt_issues = []
+        state_conflicts = []
         if plan is not None:
             attendance = self.repository.attendance_by_vehicle(
                 delivery_date, {order.vehicle_id for order in plan.orders}
@@ -66,6 +69,8 @@ class DailyExceptionService:
                     issues.append("ATTENDANCE_UNAVAILABLE")
                 if not order.vehicle.is_active:
                     issues.append("VEHICLE_INACTIVE")
+                if order.vehicle.operating_status != 'ACTIVE':
+                    issues.append('VEHICLE_NOT_OPERATIONAL')
                 if not order.vehicle.vehicle_type.is_active:
                     issues.append("VEHICLE_TYPE_INACTIVE")
                 if issues:
@@ -86,6 +91,18 @@ class DailyExceptionService:
                     )
                 if plan.status == DispatchPlanStatus.PUBLISHED:
                     for detail in sorted(order.details, key=lambda item: item.id):
+                        if detail.delivery_status == DeliveryStopStatus.SIGNED and not detail.proofs:
+                            receipt_issues.append({'category':'MISSING_PROOF','object_id':detail.id,'order_id':order.id,
+                                'store_name':detail.delivery_demand.store.name,'message':'已签收但尚未上传回单'})
+                        replaced = {p.replaces_proof_id for p in detail.proofs if p.replaces_proof_id is not None}
+                        for proof in detail.proofs:
+                            if proof.review_status == DeliveryProofReviewStatus.REJECTED and proof.id not in replaced:
+                                receipt_issues.append({'category':'REJECTED_PROOF','object_id':proof.id,'order_id':order.id,
+                                    'store_name':detail.delivery_demand.store.name,'message':'回单被驳回，尚无补传版本'})
+                        if (detail.quantity != detail.delivery_demand.quantity or detail.delivery_demand.date != delivery_date
+                            or detail.delivery_demand.status in {DeliveryDemandStatus.PENDING,DeliveryDemandStatus.PLANNED,DeliveryDemandStatus.CANCELLED}):
+                            state_conflicts.append({'category':'STATE_CONFLICT','object_id':detail.id,'order_id':order.id,
+                                'store_name':detail.delivery_demand.store.name,'message':'已发布任务与需求日期、数量或状态不一致'})
                         if detail.delivery_status == DeliveryStopStatus.FAILED:
                             failed_stops.append(
                                 {
@@ -163,6 +180,8 @@ class DailyExceptionService:
             "pending_outside_reference_plan": section(pending_items),
             "plan_vehicle_unavailable": section(unavailable),
             "failed_stops": section(failed_stops),
+            "receipt_issues": section(receipt_issues),
+            "state_conflicts": section(state_conflicts),
             "notices": notices,
             "note": (
                 "只读查询时刻快照。未分配记录属于所选方案；方案外只列PENDING及由有效草稿占用的PLANNED需求。"

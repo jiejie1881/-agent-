@@ -110,9 +110,10 @@ class VehicleService(BaseService):
         if not driver.is_active:
             raise ConflictError("不能绑定已停用的司机账号")
 
-    def create(self, data: VehicleCreate, actor: User | None = None) -> Vehicle:
+    def create(self, data: VehicleCreate, actor: User | None = None, *, commit: bool = True) -> Vehicle:
         self._validate_vehicle_type(data.vehicle_type_id)
         self._validate_driver(data.driver_user_id)
+        self._validate_operating_fields(data.model_dump(), data.vehicle_type_id)
         if self.repository.get_by_code(data.code):
             raise ConflictError("车辆编码已存在")
         if self.repository.get_by_plate_number(data.plate_number):
@@ -123,12 +124,13 @@ class VehicleService(BaseService):
             if actor and data.driver_user_id:
                 AuditLogService(self.session).add(actor, "DRIVER_DEFAULT_VEHICLE_CHANGED", "Vehicle", vehicle.id, {"before_driver_id": None, "after_driver_id": data.driver_user_id})
             return vehicle
-        return self._commit(action, "车辆编码或车牌号已存在")
+        return self._commit(action, "车辆编码或车牌号已存在", commit=commit)
 
     def update(self, vehicle_id: int, data: VehicleUpdate, actor: User | None = None) -> Vehicle:
         vehicle = self.get(vehicle_id)
         updates = data.model_dump(exclude_unset=True)
         before_driver_id = vehicle.driver_user_id
+        self._validate_operating_fields({**{key: getattr(vehicle, key) for key in ('rated_load', 'allowed_route_ids', 'operating_status')}, **updates}, updates.get('vehicle_type_id', vehicle.vehicle_type_id))
         if "vehicle_type_id" in updates:
             self._validate_vehicle_type(updates["vehicle_type_id"])
         if "driver_user_id" in updates:
@@ -145,6 +147,23 @@ class VehicleService(BaseService):
     def delete(self, vehicle_id: int) -> None:
         vehicle = self.get(vehicle_id)
         self._commit(lambda: self.repository.delete(vehicle), "车辆正在使用，不能删除")
+
+    def _validate_operating_fields(self, values, type_id):
+        kind = self.vehicle_type_repository.get(type_id)
+        rated = values.get('rated_load')
+        if rated is not None and kind is not None and rated < kind.min_load:
+            raise ConflictError('核定载重不能低于车型最低载重')
+        if values.get('operating_status') is None:
+            raise ConflictError('运营状态不能为空')
+        ids = values.get('allowed_route_ids')
+        if ids is not None:
+            from app.models.route import Route
+            if len(set(ids)) != len(ids) or any(i <= 0 for i in ids):
+                raise ConflictError('可运行线路编号必须为不重复的正整数')
+            for route_id in ids:
+                route = self.session.get(Route, route_id)
+                if route is None or not route.is_active:
+                    raise ConflictError('可运行线路不存在或已停用')
 
 
 class VehicleTypeTerrainPermissionService(BaseService):

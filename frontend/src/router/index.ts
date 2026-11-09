@@ -19,6 +19,12 @@ import AgentChatView from '@/views/agent/AgentChatView.vue'
 import DailyExceptionView from '@/views/dispatch/DailyExceptionView.vue'
 
 const children: RouteRecordRaw[] = [
+  { path: 'agent/memories', component: () => import('@/views/agent/AgentMemoryView.vue'), meta: { title: '我的长期记忆', group: '智能助手' } },
+  {path: 'system/knowledge', component: () => import('@/views/knowledge/KnowledgeManagementView.vue'), meta: {title: '知识治理', group: '系统管理', requiresAdmin: true}},
+  {path:'operations/imports', component:() => import('@/views/operations/BusinessImportView.vue'), meta:{title:'业务数据导入', group:'每日运营'}},
+  {path:'dispatch/exception-cases', component:() => import('@/views/dispatch/ExceptionCaseView.vue'), meta:{title:'异常处理工单',group:'派车中心'}},
+  { path: 'agent-dispatch', redirect: '/agent-dispatch/business' },
+  { path: 'agent-dispatch/business', name: 'agent-dispatch-shadow', component: () => import('@/views/agent/AgentDispatchShadowView.vue'), meta: { title: 'Agent智能派车', group: '智能助手' } },
   { path: 'dispatch/quality', name: 'dispatch-quality', component: () => import('@/views/dispatch/DispatchQualityView.vue'), meta: { title: '调度质量报告', group: '派车中心' } },
   { path: 'operations/leave-approval', component: () => import('@/views/drivers/DriverLeaveView.vue'), meta: { title: '请假审批', group: '每日运营' } },
   { path: 'operations/substitutions', component: () => import('@/views/drivers/DriverLeaveView.vue'), props: { mode: 'substitution' }, meta: { title: '代班调度', group: '每日运营' } },

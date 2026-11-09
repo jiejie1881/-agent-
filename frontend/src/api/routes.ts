@@ -1,7 +1,9 @@
 import http from '@/api/http'
+import type {Store} from '@/types/store'
+export const listRouteStores = (id:number) => http.get<Store[]>(`/routes/${id}/stores`)
 import type { Route, RoutePayload, RouteTerrainConfig } from '@/types/route'
 
-export function listRoutes(params: { offset?: number; limit?: number } = {}) {
+export function listRoutes(params: { offset?: number; limit?: number; q?:string; is_active?:boolean } = {}) {
   return http.get<Route[]>('/routes', { params })
 }
 

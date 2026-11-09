@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Query, Response, status
 
 from app.api.dependencies import DbSession
+from app.api.auth_dependencies import CurrentUser
 from app.schemas.vehicle_attendance import (
     VehicleAttendanceCreate,
     VehicleAttendanceResponse,
@@ -34,19 +35,19 @@ def get_vehicle_attendance(attendance_id: int, db: DbSession):
 @router.post(
     "", response_model=VehicleAttendanceResponse, status_code=status.HTTP_201_CREATED
 )
-def create_vehicle_attendance(data: VehicleAttendanceCreate, db: DbSession):
-    return VehicleAttendanceService(db).create(data)
+def create_vehicle_attendance(data: VehicleAttendanceCreate, db: DbSession, actor: CurrentUser):
+    return VehicleAttendanceService(db).with_audit(actor,'VEHICLE_ATTENDANCE_CREATED','VehicleAttendance',changes=data.model_dump()).create(data)
 
 
 @router.patch("/{attendance_id}", response_model=VehicleAttendanceResponse)
 def update_vehicle_attendance(
-    attendance_id: int, data: VehicleAttendanceUpdate, db: DbSession
+    attendance_id: int, data: VehicleAttendanceUpdate, db: DbSession, actor: CurrentUser
 ):
-    return VehicleAttendanceService(db).update(attendance_id, data)
+    return VehicleAttendanceService(db).with_audit(actor,'VEHICLE_ATTENDANCE_UPDATED','VehicleAttendance',attendance_id,data.model_dump(exclude_unset=True)).update(attendance_id, data)
 
 
 @router.delete("/{attendance_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_vehicle_attendance(attendance_id: int, db: DbSession) -> Response:
-    VehicleAttendanceService(db).delete(attendance_id)
+def delete_vehicle_attendance(attendance_id: int, db: DbSession, actor: CurrentUser) -> Response:
+    VehicleAttendanceService(db).with_audit(actor,'VEHICLE_ATTENDANCE_DELETED','VehicleAttendance',attendance_id).delete(attendance_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

@@ -10,7 +10,7 @@ from app.models.dispatch_plan import DispatchOrderDetail, DispatchPlan
 from app.models.store import Store, StoreRoute
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.scripts.seed_compact_demo import AI_DEMANDS, demand_input, seed_compact_demo, validate_target
+from tests.legacy_support.seed_compact_demo import AI_DEMANDS, demand_input, seed_compact_demo, validate_target
 from app.schemas.auto_dispatch import AutoDispatchRequest
 from app.schemas.driver_leave import LeaveRequestInput, LeaveReviewInput, SubstitutionInput
 from app.services.auth_service import AuthService

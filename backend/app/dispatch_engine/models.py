@@ -24,10 +24,12 @@ class EngineVehicle:
     code: str
     plate_number: str
     vehicle_type_id: int
-    vehicle_type_code: VehicleTypeCode
+    vehicle_type_code: str
     vehicle_type_name: str
     min_load: Decimal
     max_load: Decimal
+    allowed_route_ids: tuple[int, ...] | None = None
+    daily_trip_limit: int | None = None
 
 
 @dataclass(frozen=True)

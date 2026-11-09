@@ -13,8 +13,8 @@ from app.agent.exceptions import (
     AgentModelResponseError,
     AgentModelTimeoutError,
 )
+from app.core.model_budget import BudgetDenied, BudgetedAsyncTransport, budget_for
 from app.agent.model_types import (
-    AgentMessageRole,
     AgentModelMessage,
     AgentModelResponse,
     AgentToolCall,
@@ -43,9 +43,11 @@ class OpenAICompatibleModelClient(AgentModelClient):
         self,
         settings: Settings | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
+        *, operation_id: str | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._transport = transport
+        self.operation_id = operation_id
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(provider=<configured>)"
@@ -66,7 +68,9 @@ class OpenAICompatibleModelClient(AgentModelClient):
         try:
             async with httpx.AsyncClient(
                 timeout=self._settings.agent_timeout,
-                transport=self._transport,
+                transport=BudgetedAsyncTransport(budget_for(self._settings),
+                    f"{base_url.rstrip('/')}/chat/completions", "chat", self._transport,
+                    self.operation_id),
             ) as client:
                 response = await client.post(
                     f"{base_url.rstrip('/')}/chat/completions",
@@ -77,6 +81,8 @@ class OpenAICompatibleModelClient(AgentModelClient):
                     json=payload,
                 )
                 response.raise_for_status()
+        except BudgetDenied:
+            raise AgentModelConfigurationError("模型预算保护未通过，本次不允许调用模型") from None
         except httpx.TimeoutException:
             raise AgentModelTimeoutError() from None
         except httpx.RequestError:

@@ -2,6 +2,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
+from app.core.business_clock import business_today
 from app.domain.enums import DeliveryDemandStatus, DeliveryPriority, DriverTaskStatus
 from app.domain.exceptions import BusinessError, ConflictError, NotFoundError
 from app.models.dispatch_plan import DispatchOrder
@@ -44,7 +45,7 @@ class DriverService:
 
     def _today_schedules(self, driver_id):
         scheduling = DriverSchedulingService(self.session)
-        rows = scheduling.repository.schedules(date.today(), driver_id)
+        rows = scheduling.repository.schedules(business_today(), driver_id)
         result = []
         for row in rows:
             vehicle = self.vehicle_repository.get(row.vehicle_id)
@@ -58,7 +59,7 @@ class DriverService:
 
     def today(self, current_user: User) -> list[DriverTaskSummaryResponse]:
         orders, _ = self.repository.list_for_driver(
-            current_user.id, delivery_date=date.today()
+            current_user.id, delivery_date=business_today()
         )
         return [self._summary(order) for order in orders]
 
@@ -115,9 +116,9 @@ class DriverService:
         return self._stop_response(stop, self._stop_sequence(task_id, stop_id, current_user))
 
     def arrive_stop(
-        self, task_id: int, stop_id: int, current_user: User
+        self, task_id: int, stop_id: int, current_user: User, idempotency_key: str | None = None
     ) -> DriverTaskStopResponse:
-        self.stop_service.arrive(task_id, stop_id, current_user)
+        self.stop_service.arrive(task_id, stop_id, current_user,idempotency_key)
         return self.get_stop(task_id, stop_id, current_user)
 
     def sign_stop(
@@ -126,8 +127,9 @@ class DriverService:
         stop_id: int,
         data: DeliveryStopSignRequest,
         current_user: User,
+        idempotency_key: str | None = None,
     ) -> DriverTaskStopResponse:
-        self.stop_service.sign(task_id, stop_id, data, current_user)
+        self.stop_service.sign(task_id, stop_id, data, current_user,idempotency_key)
         return self.get_stop(task_id, stop_id, current_user)
 
     def fail_stop(
@@ -136,8 +138,9 @@ class DriverService:
         stop_id: int,
         data: DeliveryStopFailRequest,
         current_user: User,
+        idempotency_key: str | None = None,
     ) -> DriverTaskStopResponse:
-        self.stop_service.fail(task_id, stop_id, data, current_user)
+        self.stop_service.fail(task_id, stop_id, data, current_user,idempotency_key)
         return self.get_stop(task_id, stop_id, current_user)
 
     def upload_proof(
@@ -148,9 +151,10 @@ class DriverService:
         content: bytes,
         current_user: User,
         replaces_proof_id: int | None = None,
+        idempotency_key: str | None = None,
     ) -> DeliveryProofResponse:
         proof = self.stop_service.upload_proof(
-            task_id, stop_id, content_type, content, current_user, replaces_proof_id
+            task_id, stop_id, content_type, content, current_user, replaces_proof_id,idempotency_key
         )
         return DeliveryProofResponse.model_validate(proof, from_attributes=True)
 
@@ -238,7 +242,7 @@ class DriverService:
             id=vehicle.id,
             code=vehicle.code,
             plate_number=vehicle.plate_number,
-            vehicle_type_code=vehicle.vehicle_type.code.value,
+            vehicle_type_code=vehicle.vehicle_type.code,
             vehicle_type_name=vehicle.vehicle_type.name,
         )
 

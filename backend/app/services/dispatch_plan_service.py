@@ -1,5 +1,6 @@
 from datetime import date
 
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -16,13 +17,14 @@ from app.domain.exceptions import (
     DispatchAdjustmentValidationError,
     DispatchPlanValidationError,
     NotFoundError,
+    PermissionDeniedError,
 )
-from app.models.dispatch_plan import DispatchOrder, DispatchPlan
+from app.models.agent_dispatch_acceptance import AgentDispatchPlanSource
+from app.models.delivery_demand import DeliveryDemand
+from app.models.dispatch_plan import DispatchOrder, DispatchOrderDetail, DispatchPlan
 from app.models.user import User
 from app.repositories.dispatch_plan_repository import DispatchPlanRepository
 from app.schemas.auto_dispatch import DispatchVehicleResponse
-from app.schemas.dispatch_validation import DispatchValidationRequest
-from app.schemas.driver import DeliveryProofResponse
 from app.schemas.dispatch_plan import (
     DispatchDemandMoveRequest,
     DispatchPlanDetailResponse,
@@ -33,12 +35,14 @@ from app.schemas.dispatch_plan import (
     PersistedDispatchRouteResponse,
     PersistedUnassignedDemandResponse,
 )
+from app.schemas.dispatch_validation import DispatchValidationRequest
+from app.schemas.driver import DeliveryProofResponse
+from app.services.audit_log_service import AuditAction, AuditLogService
 from app.services.delivery_demand_status_service import DeliveryDemandStatusService
-from app.services.dispatch_validation_service import DispatchValidationService
 from app.services.dispatch_plan_publication_validator import (
     DispatchPlanPublicationValidator,
 )
-from app.services.audit_log_service import AuditAction, AuditLogService
+from app.services.dispatch_validation_service import DispatchValidationService
 
 
 class DispatchPlanService:
@@ -73,20 +77,27 @@ class DispatchPlanService:
 
     def validate_plan(self, plan_id: int) -> DispatchPlanValidationResponse:
         plan = self._get_model(plan_id)
-        issues = self.publication_validator.validate(plan)
+        # Advisory read only. publish() separately validates under write locks.
+        issues = self.publication_validator.validate(plan, for_update=False)
         return DispatchPlanValidationResponse(
             plan_id=plan.id,
             valid=not issues,
             issues=issues,
         )
 
-    def publish(self, plan_id: int, actor: User) -> DispatchPlanDetailResponse:
+    def publish(self, plan_id: int, actor: User, *, agent_authorized: bool = False,
+                commit: bool = True) -> DispatchPlanDetailResponse:
         try:
             from app.services.driver_leave_service import DriverLeaveService
             DriverLeaveService(self.session).lock_resources()
             plan = self.repository.get_for_update(plan_id)
             if plan is None:
                 raise NotFoundError("派车方案不存在")
+            agent_source = self.session.get(AgentDispatchPlanSource, plan.id)
+            if agent_source is not None and not agent_authorized:
+                raise PermissionDeniedError("Agent 草稿须经独立人工确认后发布")
+            if agent_source is None and agent_authorized:
+                raise PermissionDeniedError("目标方案不是 Agent 草稿")
             if plan.status == DispatchPlanStatus.PUBLISHED:
                 return self._to_detail(plan)
             if plan.status != DispatchPlanStatus.DRAFT:
@@ -99,11 +110,28 @@ class DispatchPlanService:
             previous = self.repository.get_published_by_date(
                 plan.delivery_date, exclude_plan_id=plan.id
             )
+            if previous is not None and plan.version <= previous.version:
+                raise ConflictError("已有更新版本发布，请刷新后重新生成方案")
             new_demand_ids = self._assigned_demand_ids(plan)
             previous_demand_ids = (
                 self._assigned_demand_ids(previous) if previous is not None else set()
             )
             previous_only_ids = previous_demand_ids - new_demand_ids
+            completed_ids = set()
+            if previous is not None:
+                for order in previous.orders:
+                    for detail in order.details:
+                        demand = detail.delivery_demand
+                        if demand.status == DeliveryDemandStatus.COMPLETED:
+                            completed_ids.add(demand.id)
+                        elif (demand.status == DeliveryDemandStatus.DELIVERING
+                              or detail.delivery_status != DeliveryStopStatus.PENDING
+                              or detail.arrived_at is not None
+                              or detail.signed_at is not None
+                              or detail.proofs):
+                            raise ConflictError("旧方案存在已开始但未完成的配送任务，不能替换，请先完成或处理该任务")
+            # Completed work keeps its original task, timestamps, proof and audit links.
+            previous_only_ids -= completed_ids
             draft_owned_previous_ids = (
                 self.repository.assigned_demand_ids_in_draft_plans(
                     plan.delivery_date,
@@ -138,15 +166,23 @@ class DispatchPlanService:
                     "after_status": DispatchPlanStatus.PUBLISHED.value,
                     "version": plan.version,
                     "replaced_plan_id": previous.id if previous else None,
+                    "preserved_completed_demand_ids": sorted(completed_ids),
+                    "released_demand_ids": sorted(previous_only_ids),
                 },
             )
-            self.session.commit()
+            if commit:
+                self.session.commit()
+            else:
+                self.session.flush()
         except BusinessError:
             self.session.rollback()
             raise
         except IntegrityError as exc:
             self.session.rollback()
             raise ConflictError("同一天只能有一个PUBLISHED派车方案") from exc
+        except Exception:
+            self.session.rollback()
+            raise
         refreshed = self.repository.get(plan.id)
         if refreshed is None:
             raise NotFoundError("派车方案不存在")
@@ -226,6 +262,15 @@ class DispatchPlanService:
                 driver = scheduling.resolve(plan.delivery_date, order.period.value, order.vehicle_id)
                 if driver.id != order.actual_driver_id:
                     raise BusinessError("任务司机与实际排班不一致", 409, "DRIVER_ASSIGNMENT_STALE")
+                busy = self.session.scalar(select(DispatchOrder.id)
+                    .join(DispatchPlan,DispatchPlan.id==DispatchOrder.plan_id)
+                    .join(DispatchOrderDetail,DispatchOrderDetail.dispatch_order_id==DispatchOrder.id)
+                    .join(DeliveryDemand,DeliveryDemand.id==DispatchOrderDetail.delivery_demand_id)
+                    .where(DispatchPlan.status==DispatchPlanStatus.PUBLISHED,DispatchOrder.id!=order.id,
+                        DeliveryDemand.status==DeliveryDemandStatus.DELIVERING,
+                        or_(DispatchOrder.vehicle_id==order.vehicle_id,DispatchOrder.actual_driver_id==driver.id)).limit(1))
+                if busy is not None:
+                    raise BusinessError("车辆或司机正在执行其他配送任务，请先完成或处理该任务",409,"RESOURCE_IN_DELIVERY")
             if target_status == DeliveryDemandStatus.COMPLETED:
                 for detail in order.details:
                     if detail.delivery_demand.status not in allowed_current:
@@ -371,6 +416,7 @@ class DispatchPlanService:
         *,
         commit: bool = True,
         audit_context: dict[str, object] | None = None,
+        agent_authorized: bool = False,
     ) -> DispatchPlanDetailResponse:
         try:
             plan = self.repository.get_for_update(plan_id)
@@ -380,6 +426,8 @@ class DispatchPlanService:
                 raise DispatchAdjustmentError(
                     "PLAN_NOT_DRAFT", "只有DRAFT方案可以人工调整"
                 )
+            if self.session.get(AgentDispatchPlanSource, plan.id) is not None and not agent_authorized:
+                raise DispatchAdjustmentError("AGENT_DRAFT_ADJUSTMENT_LOCKED", "Agent 草稿调整需重新校验，当前暂不可调整")
             if data.source_order_id == data.target_order_id:
                 raise DispatchAdjustmentError(
                     "SOURCE_EQUALS_TARGET", "原任务和目标任务不能相同"
@@ -441,7 +489,7 @@ class DispatchPlanService:
             source_result = self.load_constraint.validate_load(
                 source_load,
                 source.vehicle.vehicle_type.min_load,
-                source.vehicle.vehicle_type.max_load,
+                min(source.vehicle.vehicle_type.max_load, source.vehicle.rated_load) if source.vehicle.rated_load is not None else source.vehicle.vehicle_type.max_load,
             )
             if not source_result.passed:
                 code = (
@@ -598,6 +646,7 @@ class DispatchPlanService:
     def _to_detail(self, plan: DispatchPlan) -> DispatchPlanDetailResponse:
         return DispatchPlanDetailResponse(
             **self._to_summary(plan).model_dump(),
+            source="AGENT" if self.session.get(AgentDispatchPlanSource, plan.id) is not None else "TRADITIONAL",
             orders=[
                 PersistedDispatchOrderResponse(
                     actual_driver_id=order.actual_driver_id,

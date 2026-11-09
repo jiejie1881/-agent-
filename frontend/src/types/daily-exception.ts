@@ -5,6 +5,8 @@ export interface ExceptionSection<T> {
 }
 
 export interface DailyExceptionReport {
+  receipt_issues?: ExceptionSection<{category:string;object_id:number;order_id:number;store_name:string;message:string}>
+  state_conflicts?: ExceptionSection<{category:string;object_id:number;order_id:number;store_name:string;message:string}>
   delivery_date: string
   reference_plan: {
     id: number

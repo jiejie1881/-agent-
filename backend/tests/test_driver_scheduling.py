@@ -142,7 +142,7 @@ def test_viewer_read_only_dispatcher_shift_but_not_password(client, session):
 
 
 def test_demo_account_initialization_reuses_credentials_without_silent_reset(client, session):
-    from app.scripts.seed_driver_accounts import initialize, render_local
+    from tests.legacy_support.seed_driver_accounts import initialize, render_local
     from app.models.user import User
     from app.core.security import verify_password
     a, b, order, demand, schedule = context(client, session)

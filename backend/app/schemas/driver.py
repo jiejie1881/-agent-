@@ -1,14 +1,28 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
+
+
+def serialize_stop_utc(value):
+    # These fields are written by DeliveryStopService with datetime.now(UTC).
+    # MySQL/SQLite DATETIME drops the offset, so restore that known contract.
+    if value is None:
+        return None
+    return (value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)).isoformat().replace('+00:00','Z')
 
 from app.domain.enums import (
     DeliveryFailureReason,
     DeliveryPeriod,
     DeliveryPriority,
-    DeliveryStopStatus,
     DeliveryProofReviewStatus,
+    DeliveryStopStatus,
     DriverTaskStatus,
 )
 
@@ -71,6 +85,10 @@ class DriverTaskStopResponse(BaseModel):
     failure_reason: DeliveryFailureReason | None
     driver_remark: str | None
     proofs: list["DeliveryProofResponse"]
+
+    @field_serializer('arrived_at','signed_at')
+    def utc_stop_times(self,value):
+        return serialize_stop_utc(value)
 
 
 class DeliveryProofReviewResponse(BaseModel):

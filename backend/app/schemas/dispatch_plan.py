@@ -3,18 +3,19 @@ from __future__ import annotations
 from datetime import date as Date
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 from app.domain.enums import (
     DeliveryDemandStatus,
     DeliveryPeriod,
-    DispatchPlanStatus,
     DeliveryPriority,
     DeliveryStopStatus,
+    DispatchPlanStatus,
 )
-from app.schemas.driver import DeliveryProofResponse
 from app.schemas.auto_dispatch import DispatchVehicleResponse
+from app.schemas.driver import DeliveryProofResponse, serialize_stop_utc
 
 
 class DispatchPlanSummaryResponse(BaseModel):
@@ -42,6 +43,10 @@ class PersistedDispatchOrderDetailResponse(BaseModel):
     receiver_name: str | None
     receiver_phone: str | None
     signed_at: datetime | None
+
+    @field_serializer('signed_at')
+    def utc_signed_time(self,value):
+        return serialize_stop_utc(value)
     driver_remark: str | None
     proofs: list[DeliveryProofResponse]
 
@@ -81,6 +86,7 @@ class PersistedUnassignedDemandResponse(BaseModel):
 
 
 class DispatchPlanDetailResponse(DispatchPlanSummaryResponse):
+    source: Literal["TRADITIONAL", "AGENT"] = "TRADITIONAL"
     orders: list[PersistedDispatchOrderResponse]
     unassigned_demands: list[PersistedUnassignedDemandResponse]
 

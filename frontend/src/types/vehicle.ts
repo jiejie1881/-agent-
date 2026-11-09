@@ -1,6 +1,6 @@
 import type { TimestampFields } from '@/types/common'
 
-export type VehicleTypeCode = 'FOUR_METER' | 'BIG_VAN' | 'SMALL_VAN'
+export type VehicleTypeCode = string
 
 export interface VehicleType extends TimestampFields {
   id: number
@@ -20,6 +20,11 @@ export interface VehicleTypePayload {
 }
 
 export interface Vehicle extends TimestampFields {
+  organization?: string | null
+  rated_load?: string | null
+  daily_trip_limit?: number | null
+  operating_status?: 'ACTIVE' | 'MAINTENANCE' | 'RETIRED'
+  allowed_route_ids?: number[] | null
   id: number
   code: string
   plate_number: string
@@ -30,6 +35,11 @@ export interface Vehicle extends TimestampFields {
 }
 
 export interface VehiclePayload {
+  organization?: string | null
+  rated_load?: number | null
+  daily_trip_limit?: number | null
+  operating_status?: 'ACTIVE' | 'MAINTENANCE' | 'RETIRED'
+  allowed_route_ids?: number[] | null
   code: string
   plate_number: string
   vehicle_type_id: number

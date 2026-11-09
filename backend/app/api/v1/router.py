@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends
 
 from app.api.auth_dependencies import enforce_rbac
+from app.api.v1.endpoints import business_imports, exception_cases
+from app.api.v1.endpoints import knowledge
 
 from app.api.v1.endpoints import (
     agent,
@@ -25,7 +27,14 @@ from app.api.v1.endpoints import (
 )
 
 api_router = APIRouter(dependencies=[Depends(enforce_rbac)])
+api_router.include_router(knowledge.router)
+api_router.include_router(business_imports.router)
+api_router.include_router(exception_cases.router)
 api_router.include_router(agent.router)
+from app.api.v1.endpoints import agent_stream
+api_router.include_router(agent_stream.router)
+from app.api.v1.endpoints import agent_memory
+api_router.include_router(agent_memory.router)
 api_router.include_router(auto_dispatch.router)
 api_router.include_router(terrains.router)
 api_router.include_router(routes.router)
